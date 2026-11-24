@@ -98,6 +98,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             write_audit('onboarding_documents', $d['onboarding_id'], 'UPLOAD', $d['doc_type'], $status);
+
+            if ($status === 'Rejected') {
+                create_notification(
+                    'Document Rejected',
+                    'Document Rejected',
+                    $d['onboarding_id'] . ' – ' . $d['doc_type'] . ' rejected.',
+                    base_url('modules/onboarding/view.php?id=' . $d['onboarding_pk']),
+                    'onboarding',
+                    $d['onboarding_id']
+                );
+            }
             flash('success', $d['doc_type'] . ' updated.');
             redirect(base_url('modules/onboarding/view.php?id=' . $d['onboarding_pk']));
         } catch (Throwable $e) {

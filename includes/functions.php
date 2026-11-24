@@ -161,6 +161,57 @@ function onboarding_doc_types(): array
     ];
 }
 
+/**
+ * Docs ready for Admin submit: each type must be Received (with file) or Not Applicable.
+ * Pending / Rejected / missing file blocks submit.
+ *
+ * @return string[] list of blocking messages (empty = OK)
+ */
+function onboarding_doc_submit_errors(int $onboardingPk): array
+{
+    $errors = [];
+    $stmt = db()->prepare(
+        'SELECT doc_type, status, file_path FROM onboarding_documents WHERE onboarding_pk = ? ORDER BY id'
+    );
+    $stmt->execute([$onboardingPk]);
+    $docs = $stmt->fetchAll();
+
+    if (!$docs) {
+        return ['Upload required documents before submit (or mark Not Applicable).'];
+    }
+
+    $found = [];
+    foreach ($docs as $d) {
+        $found[$d['doc_type']] = true;
+        $type = $d['doc_type'];
+        $status = $d['status'];
+        $hasFile = !empty($d['file_path']);
+
+        if ($status === 'Not Applicable') {
+            continue;
+        }
+        if ($status === 'Rejected') {
+            $errors[] = $type . ' is Rejected — replace the file and set status to Received.';
+            continue;
+        }
+        if ($status === 'Pending' || !$hasFile) {
+            $errors[] = $type . ' must be Received (file uploaded) or Not Applicable.';
+            continue;
+        }
+        if ($status === 'Received' && !$hasFile) {
+            $errors[] = $type . ' is Received but file is missing — upload again.';
+        }
+    }
+
+    foreach (onboarding_doc_types() as $requiredType) {
+        if (empty($found[$requiredType])) {
+            $errors[] = $requiredType . ' row missing — open Documents and refresh onboarding.';
+        }
+    }
+
+    return $errors;
+}
+
 function vehicle_requirements(): array
 {
     return ['8ft', '10ft', '14ft', '20ft', 'Other'];

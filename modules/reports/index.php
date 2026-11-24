@@ -9,6 +9,7 @@ $reports = [
     'pipeline' => 'Sales Pipeline Report',
     'salesperson' => 'Salesperson Performance Report',
     'followups' => 'Follow-up Report',
+    'commercial_approval' => 'Commercial Approval Report',
     'onboarding' => 'Onboarding Report',
     'pending_approvals' => 'Pending Approval Report',
     'customers' => 'Customer Master Report',

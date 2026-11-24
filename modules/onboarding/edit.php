@@ -58,6 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $overall_status = 'Submitted';
         if ($gstin === '') $errors[] = 'GSTIN is required before submit.';
         if ($registered_address === '') $errors[] = 'Registered Address is required before submit.';
+        if ($pan === '') $errors[] = 'PAN is required before submit.';
+        // Every document must be Received (with file) or Not Applicable
+        foreach (onboarding_doc_submit_errors($id) as $docErr) {
+            $errors[] = $docErr;
+        }
     }
 
     if (!$errors) {
@@ -136,7 +141,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Complete Onboarding Details</h2>
-    <p class="step-note"><strong>Step 3 – Onboarding:</strong> Name and contact are already copied from the prospect. Fill GST, addresses, vehicle, route, and other details. Upload documents from the View page. When ready, click <em>Submit for Admin Approval</em>.</p>
+    <p class="step-note"><strong>Step 3 – Onboarding:</strong> Fill GST, PAN, addresses and other details. On the View page, every document must be <strong>Received</strong> (file uploaded) or <strong>Not Applicable</strong> before <em>Submit for Admin Approval</em>.</p>
     <p>
         ID <strong><?= e($o['onboarding_id']) ?></strong> |
         Prospect <a href="<?= e(base_url('modules/prospects/view.php?id=' . $o['prospect_pk'])) ?>"><?= e($o['prospect_id']) ?></a>

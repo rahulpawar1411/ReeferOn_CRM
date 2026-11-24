@@ -14,12 +14,16 @@ $user = current_user();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($pageTitle) ?> | ReeferON CRM</title>
+    <link rel="icon" type="image/png" href="<?= e(base_url('assets/logo.png')) ?>">
     <link rel="stylesheet" href="<?= e(base_url('assets/css/style.css')) ?>">
 </head>
 <body>
 <div class="app">
     <aside class="sidebar">
-        <div class="brand">ReeferON CRM</div>
+        <a class="brand" href="<?= e(base_url('index.php')) ?>">
+            <img src="<?= e(base_url('assets/logo.png')) ?>" alt="ReeferON" class="brand-logo">
+            <span class="brand-text">ReeferON CRM</span>
+        </a>
         <nav>
             <a class="<?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= e(base_url('index.php')) ?>">Dashboard</a>
             <a class="<?= $currentPage === 'prospects' ? 'active' : '' ?>" href="<?= e(base_url('modules/prospects/index.php')) ?>">Prospects</a>

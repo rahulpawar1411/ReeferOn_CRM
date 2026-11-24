@@ -57,6 +57,30 @@ function report_dataset(string $type): array
                 'Follow-up Report',
             ];
 
+        case 'commercial_approval':
+            $rows = $pdo->query(
+                "SELECT p.prospect_id, p.company_name, p.contact_person, p.mobile, p.business_type,
+                        p.pipeline_stage, p.salesperson_name, p.updated_at,
+                        o.onboarding_id, o.commercial_reference, o.overall_status AS onboarding_status
+                 FROM prospects p
+                 LEFT JOIN onboarding o ON o.prospect_pk = p.id
+                 WHERE p.pipeline_stage IN (
+                     'Commercial Sent', 'Commercial Approved', 'Onboarding', 'Customer Activated'
+                 )
+                 ORDER BY
+                   FIELD(p.pipeline_stage, 'Commercial Sent', 'Commercial Approved', 'Onboarding', 'Customer Activated'),
+                   p.id DESC"
+            )->fetchAll(PDO::FETCH_NUM);
+            return [
+                [
+                    'Prospect ID', 'Company', 'Contact', 'Mobile', 'Business Type',
+                    'Pipeline Stage', 'Salesperson', 'Stage Updated',
+                    'Onboarding ID', 'Commercial Reference', 'Onboarding Status',
+                ],
+                $rows,
+                'Commercial Approval Report',
+            ];
+
         case 'onboarding':
             $rows = $pdo->query(
                 "SELECT onboarding_id, prospect_id, customer_name, gstin, overall_status,
@@ -123,6 +147,7 @@ function report_types(): array
         'pipeline',
         'salesperson',
         'followups',
+        'commercial_approval',
         'onboarding',
         'pending_approvals',
         'customers',

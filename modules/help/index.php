@@ -99,8 +99,8 @@ if (!in_array($step, $allowed, true)) {
     <ol>
         <li>Commercial Approved prospect pe <strong>Initiate Customer Onboarding</strong> click karo</li>
         <li>Name/contact already copy ho chuka hota hai</li>
-        <li><strong>Edit Details</strong> – GSTIN, addresses, vehicle, route, payment terms etc. fill karo</li>
-        <li>Documents upload karo (GST, PAN, KYC, Agreement, PO, Commercial)</li>
+        <li><strong>Edit Details</strong> – GSTIN, PAN, addresses, vehicle, route, payment terms etc. fill karo</li>
+        <li>Documents: har type <strong>Received</strong> (file upload) ya <strong>Not Applicable</strong> — Pending/Rejected pe submit block</li>
         <li><strong>Submit for Admin Approval</strong> dabao</li>
     </ol>
     <div class="help-next">
@@ -218,6 +218,7 @@ if (!in_array($step, $allowed, true)) {
         <li>IDs (<code>REO-LEAD</code> / <code>REO-ONB</code> / <code>REO-CUS</code>) user edit nahi kar sakta</li>
         <li>Delete permanent nahi — status use karo (Inactive / Cancelled / On Hold)</li>
         <li>Onboarding sirf <strong>Commercial Approved</strong> ke baad</li>
+        <li>Submit se pehle saari docs Received / N/A honi chahiye</li>
         <li>Customer code sirf <strong>Admin Approve</strong> ke baad</li>
         <li>Same data dobara type mat karo — modules connected hain</li>
         <li>Abhi login nahi hai — sab <strong>System User</strong> se chal raha hai; roles baad mein</li>

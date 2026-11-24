@@ -33,7 +33,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Customer Information</h2>
-    <p class="step-note"><strong>Step 3 – Onboarding view:</strong> Review details → fill fields via <em>Edit Details</em> → upload Documents below → <em>Submit for Admin Approval</em>.</p>
+    <p class="step-note"><strong>Step 3 – Onboarding view:</strong> Edit details (GST/PAN/address) → set every document to <strong>Received</strong> or <strong>Not Applicable</strong> → then <em>Submit for Admin Approval</em> from Edit.</p>
     <dl class="dl-grid">
         <dt>Onboarding ID</dt><dd><?= e($o['onboarding_id']) ?></dd>
         <dt>Prospect ID</dt><dd><?= e($o['prospect_id']) ?></dd>
