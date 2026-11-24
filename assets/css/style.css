@@ -1,0 +1,174 @@
+/* ReeferON CRM - Simple functional UI (polish later) */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  color: #222;
+  background: #f4f6f8;
+}
+a { color: #1a3a6b; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px;
+  background: #1a3a6b;
+  color: #fff;
+  padding: 16px 0;
+  flex-shrink: 0;
+}
+.brand {
+  font-weight: bold;
+  font-size: 16px;
+  padding: 0 16px 16px;
+  border-bottom: 1px solid #2c4f85;
+  margin-bottom: 12px;
+}
+.sidebar nav a {
+  display: block;
+  color: #d9e2f0;
+  padding: 10px 16px;
+}
+.sidebar nav a:hover,
+.sidebar nav a.active {
+  background: #254a82;
+  color: #fff;
+  text-decoration: none;
+}
+.sidebar-foot {
+  margin-top: 30px;
+  padding: 16px;
+  font-size: 12px;
+  color: #c5d2e6;
+  border-top: 1px solid #2c4f85;
+}
+.muted { color: #9db0cc; margin-top: 4px; }
+
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  padding: 12px 20px;
+}
+.topbar h1 { margin: 0; font-size: 18px; color: #1a3a6b; }
+.content { padding: 20px; }
+
+.alert {
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+.alert-success { border-color: #8bc49a; background: #eef9f1; color: #1e6b35; }
+.alert-error { border-color: #d9a9a9; background: #fdf1f1; color: #8a1f1f; }
+
+.card {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card h2 { margin: 0 0 12px; font-size: 16px; }
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  align-items: end;
+}
+.toolbar .field { display: flex; flex-direction: column; gap: 4px; }
+.toolbar label { font-size: 12px; color: #555; }
+
+.btn {
+  display: inline-block;
+  border: 1px solid #1a3a6b;
+  background: #1a3a6b;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn:hover { background: #254a82; text-decoration: none; color: #fff; }
+.btn-secondary {
+  background: #fff;
+  color: #1a3a6b;
+}
+.btn-secondary:hover { background: #eef2f8; color: #1a3a6b; }
+.btn-danger {
+  background: #8a1f1f;
+  border-color: #8a1f1f;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.form-grid .full { grid-column: 1 / -1; }
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  font-size: 12px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  font: inherit;
+  background: #fff;
+}
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+.required { color: #8a1f1f; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+table.data th,
+table.data td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+table.data th {
+  background: #eef2f8;
+  color: #1a3a6b;
+  font-size: 12px;
+}
+table.data tr:nth-child(even) { background: #fafbfc; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  font-size: 12px;
+}
+.dl-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 8px 12px;
+}
+.dl-grid dt { color: #555; font-weight: bold; }
+.dl-grid dd { margin: 0; }
+
+.empty { padding: 20px; text-align: center; color: #666; border: 1px dashed #ccc; background: #fff; }
+
+@media (max-width: 800px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; }
+  .form-grid { grid-template-columns: 1fr; }
+  .dl-grid { grid-template-columns: 1fr; }
+}

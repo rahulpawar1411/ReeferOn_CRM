@@ -1,0 +1,719 @@
+================================================================================
+REEFERON CRM
+Complete Application Development Requirements & Business Workflow
+(Official planning / requirements document — keep modules CONNECTED)
+================================================================================
+Stack: PHP 8 + MySQL 8 + HTML + CSS + JavaScript
+Project folder: C:\wamp64\www\CRM
+Open app: http://localhost/CRM/
+Related files:
+  PHASES.md                 – build order + status
+  STRUCTURE_AND_DB_PLAN.txt – navigation + DB relationships (NEXT REVIEW)
+
+--------------------------------------------------------------------------------
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+
+Build a complete, integrated, web-based CRM for ReeferON to manage the full
+customer acquisition and customer management process.
+
+Three major modules (MUST stay connected — not separate systems):
+
+  1. Sales Prospect Management
+  2. New Customer Onboarding
+  3. Existing Customer Master
+
+Main business workflow:
+
+  New Lead
+    → Sales Process
+    → Commercial Approval
+    → Customer Onboarding
+    → Department Approvals
+    → Customer Code Generation
+    → Existing Customer Master
+    → Customer Activation
+
+IMPORTANT DEVELOPMENT RULE
+- Do NOT build these as independent forms or separate systems.
+- Prospect data must auto-transfer to Onboarding, then to Customer Master
+  after required approvals.
+- Never force users to re-enter the same information.
+
+--------------------------------------------------------------------------------
+2. APPLICATION STRUCTURE
+--------------------------------------------------------------------------------
+
+Main sections:
+
+  1.  Login and User Management
+  2.  Management Dashboard
+  3.  Sales Prospect Management
+  4.  Follow-up Management
+  5.  Sales Pipeline Management
+  6.  New Customer Onboarding
+  7.  Document Management
+  8.  Department Approval Management
+  9.  Customer Code Generation
+ 10.  Existing Customer Master
+ 11.  Reports and Excel Export
+ 12.  Notifications
+ 13.  Activity History and Audit Trail
+ 14.  Application Settings
+
+UI / UX:
+- Clean, professional, easy to use
+- Corporate look: white background, navy blue + grey
+- Clear navigation, summary cards, tables, search filters, structured forms
+- Responsive: desktop, tablet, mobile
+
+--------------------------------------------------------------------------------
+3. USER LOGIN AND ACCESS MANAGEMENT
+--------------------------------------------------------------------------------
+
+Every employee must have an individual login.
+
+User information:
+- Employee ID
+- Employee Name
+- Email ID
+- Mobile Number
+- User ID
+- Password
+- Department
+- Role
+- Account Status
+
+Departments:
+- Sales
+- Business Development
+- Operations
+- Finance
+- Admin
+- Management
+
+Roles:
+- Super Admin
+- Admin
+- Salesperson
+- Finance
+- Operations
+- Approver
+- Management
+- Viewer
+
+User management:
+- Admin creates / manages employee accounts
+- Admin can activate / deactivate users
+- Individual login credentials per employee
+- Users only see modules allowed by role
+- Salespersons see their assigned prospects
+- Management sees overall business information
+- Finance and Operations see relevant onboarding requests
+- Record who created and updated every record
+- Passwords securely stored; never visible to administrators
+
+Access control:
+- Role-based access for view / create / edit / approve / export / manage
+- Enforce permissions on the server (not only hide buttons)
+
+--------------------------------------------------------------------------------
+4. SALES PROSPECT MANAGEMENT
+--------------------------------------------------------------------------------
+
+Used by Sales and Business Development to register and manage opportunities.
+
+4.1 Prospect creation fields
+- Prospect ID              (auto)
+- Lead Creation Date       (auto)
+- Company Name
+- Contact Person
+- Designation
+- Mobile Number
+- Email ID
+- Business Type            (QSR / FMCG / Ice Cream / Retail / Other)
+- Industry
+- City
+- Service Required         (Transportation / Warehousing / EV /
+                            Integrated Supply Chain / Other)
+- Temperature Requirement  (Ambient / Chiller / Frozen)
+- Requirement Details
+- Estimated Monthly Business (₹)
+- Lead Source              (Reference / Website / Direct / Other / LinkedIn)
+- Salesperson Name         (auto from login)
+- Next Follow-up Date
+- Remarks
+
+Automatic Prospect ID examples:
+  REO-LEAD-0001
+  REO-LEAD-0002
+  REO-LEAD-0003
+Users must NOT create or edit Prospect IDs manually.
+
+4.2 Prospect management actions
+- View / edit permitted fields
+- Update sales stage
+- Add remarks
+- Schedule follow-ups
+- View previous interactions and history
+- Search and filter
+- Only assigned salesperson or authorised manager can update
+
+4.3 Sales pipeline stages
+  1. New Prospect
+  2. Calling
+  3. Meeting
+  4. Proposal Sent
+  5. Negotiation
+  6. Commercial Sent
+  7. Commercial Approved
+  8. Onboarding
+  9. Customer Activated
+
+Closure statuses:
+- Lost
+- On Hold
+- Cancelled
+
+Pipeline rules:
+- Every stage change stores date, time, user, remarks
+- Full stage history required
+- Next follow-up date allowed
+- Management can view full pipeline
+- Onboarding only after Commercial Approved
+- Prospect cannot become active customer before onboarding + approvals
+
+--------------------------------------------------------------------------------
+5. FOLLOW-UP MANAGEMENT
+--------------------------------------------------------------------------------
+
+Dedicated follow-up section linked to prospects.
+
+Fields:
+- Prospect ID
+- Company Name
+- Contact Person
+- Follow-up Date
+- Interaction Type   (Phone Call / Email / Meeting / WhatsApp / Other)
+- Discussion Summary
+- Next Follow-up Date
+- Remarks
+- Created By
+
+Follow-up dashboard:
+- Today's Follow-ups
+- Upcoming Follow-ups
+- Overdue Follow-ups
+- Completed Follow-ups
+
+Also:
+- Notifications for upcoming / overdue
+- Every follow-up saved in prospect activity history
+
+--------------------------------------------------------------------------------
+6. NEW CUSTOMER ONBOARDING
+--------------------------------------------------------------------------------
+
+Available when prospect reaches Commercial Approved.
+Action: "Initiate Customer Onboarding"
+CRM auto-copies prospect data; user only enters extra fields.
+
+6.1 Customer information
+- Onboarding ID (auto) — example REO-ONB-0001
+- Linked Prospect ID
+- Customer Name
+- Brand Name
+- Business Type
+- Contact Person
+- Mobile Number
+- Email ID
+- Registered Address
+- Billing Address
+- Operating Address
+- GSTIN
+- PAN
+
+6.2 Business / service information
+- Service Required
+- Temperature Requirement
+- Vehicle Requirement   (8ft / 10ft / 14ft / 20ft / Other)
+- Storage Requirement   (Ambient / Chiller / Frozen)
+- Origin
+- Destination
+- Estimated Monthly Volume
+- Business Start Date
+- Commercial Reference
+
+6.3 Document management
+Documents:
+- GST Certificate
+- PAN Card
+- Company KYC
+- Customer Agreement
+- Purchase Order / Work Order
+- Commercial Approval
+
+Document status: Pending / Received / Rejected / Not Applicable
+
+Features:
+- Upload against onboarding request
+- Show name, upload date, uploaded by
+- Preview / download for authorised users
+- Replace rejected documents
+- Upload history
+- Permission-based access
+- Validate file type and size
+- Store files securely
+
+--------------------------------------------------------------------------------
+7. DEPARTMENT APPROVAL MANAGEMENT
+--------------------------------------------------------------------------------
+
+7.1 Finance approval
+Verify: GST, PAN, Company KYC, Payment Terms, Credit Limit
+Actions: review docs, approve/reject items, remarks, request corrections, resubmit
+
+7.2 Operations approval
+Verify: Service availability, vehicle, storage, origin/destination,
+        route feasibility, operational readiness
+Approve / reject with remarks
+
+7.3 Commercial approval
+Verify: Approved rates, commercial proposal, customer agreement,
+        commercial reference, other commercial conditions
+
+7.4 Final Admin approval
+After all department approvals, Admin reviews full package and
+approves or rejects with reason.
+
+Approval statuses: Pending / Approved / Rejected
+
+Rules:
+- Capture approver name, date, time, remarks
+- Rejected → correction → resubmit
+- Full approval history
+- Customer code DISABLED until all mandatory + final approval done
+- UI must show which department is pending
+
+--------------------------------------------------------------------------------
+8. AUTOMATIC CUSTOMER CODE GENERATION
+--------------------------------------------------------------------------------
+
+Generate unique customer code ONLY after final onboarding approval.
+
+Format:
+  REO-CUS-0001
+  REO-CUS-0002
+  REO-CUS-0003
+
+Process:
+  1. Sales submits onboarding
+  2. Finance verifies
+  3. Operations confirms readiness
+  4. Commercial verifies commercials
+  5. Admin final approval
+  6. CRM auto-generates customer code
+  7. Record transfers to Existing Customer Master
+  8. Authorised user can activate customer
+
+Rules:
+- Codes unique; users cannot edit them
+- No duplicate generation
+- Database-controlled sequence
+- Safe under simultaneous approvals
+- On failure: no incomplete / duplicate customer record
+
+--------------------------------------------------------------------------------
+9. EXISTING CUSTOMER MASTER
+--------------------------------------------------------------------------------
+
+Official ReeferON customer records.
+After final approval + code generation, customer appears here automatically.
+Do NOT create a second record during transfer.
+
+9.1 Customer master fields
+- Customer Code
+- Customer Name
+- Brand Name
+- Business Type
+- Contact Person
+- Mobile Number
+- Email ID
+- GSTIN
+- Registered Address
+- Billing Address
+- Operating Location
+- Services
+- Temperature Requirement
+- Commercial Details
+- Payment Terms
+- Credit Limit
+- Agreement Start Date
+- Agreement End Date
+- Account Owner
+- Customer Status   (Active / Inactive / On Hold)
+
+9.2 Direct existing-customer creation
+- For customers already doing business (skip prospect pipeline)
+- Keep existing ReeferON code if known; else Admin generates new
+- Check GSTIN + customer name for possible duplicates (show matches)
+- Do NOT auto-merge duplicates
+- Source flag: Existing Customer OR New Onboarding
+
+9.3 Actions
+- View / edit permitted fields
+- Update status
+- View documents, commercials, agreement, history
+- Search / filter / Excel export
+
+--------------------------------------------------------------------------------
+10. MANAGEMENT DASHBOARD
+--------------------------------------------------------------------------------
+
+10.1 Management summary cards
+- Total Prospects
+- New Leads
+- Active Pipeline
+- Commercial Approved
+- Onboarding Pending
+- Active Customers
+- Lost Leads
+
+Also:
+- Salesperson-wise leads
+- Monthly lead creation
+- Sales conversion
+- Pending / overdue follow-ups
+- Pending department approvals
+- Recently created customers
+- Recent activities
+
+10.2 Salesperson dashboard
+- My Total Prospects / New Leads / Active Pipeline
+- Commercial Approved / My Follow-ups
+- Converted Customers / Lost Leads
+
+10.3 Finance dashboard
+- Pending onboarding / KYC / payment terms / credit limit / rejected
+
+10.4 Operations dashboard
+- Pending service / vehicle / storage / route / operational approvals
+
+All figures must come from real saved records and respect permissions.
+
+--------------------------------------------------------------------------------
+11. SEARCH, FILTERS AND REPORTS
+--------------------------------------------------------------------------------
+
+Global search:
+- Prospect ID, Customer Code, Company/Customer Name, Contact Person,
+  Mobile, Email, GSTIN
+
+Filters:
+- Date range, Salesperson, Business Type, Industry, Service Required,
+  Temperature, Pipeline Stage, Customer Status, Approval Status
+
+Reports (+ Excel export for authorised users):
+- Prospect Report
+- Sales Pipeline Report
+- Salesperson Performance Report
+- Follow-up Report
+- Commercial Approval Report
+- Onboarding Report
+- Pending Approval Report
+- Customer Master Report
+- Active / Inactive Customer Report
+
+--------------------------------------------------------------------------------
+12. NOTIFICATIONS AND ALERTS
+--------------------------------------------------------------------------------
+
+Notify relevant roles for:
+- New Prospect Assignment
+- Follow-up Due Today / Overdue
+- Commercial Approval
+- New Onboarding Request
+- Finance / Operations / Commercial approval pending
+- Document Rejected
+- Onboarding Rejected
+- Final Admin Approval
+- Customer Code Generated
+- Customer Activated
+- Agreement Expiry
+
+--------------------------------------------------------------------------------
+13. ACTIVITY HISTORY AND AUDIT TRAIL
+--------------------------------------------------------------------------------
+
+Record for important business objects:
+- Created / Updated
+- Previous value → New value
+- Updated by, date/time
+- Pipeline stage changes
+- Document uploads
+- Approval / rejection actions
+- Customer code generation
+- Customer status changes
+
+Authorised users can view full history of prospect, onboarding, customer.
+Ordinary users cannot permanently delete business records
+(use Inactive / Cancelled / Archived).
+
+--------------------------------------------------------------------------------
+14. IMPORTANT BUSINESS RULES
+--------------------------------------------------------------------------------
+
+ 1. Every employee uses individual login.
+ 2. Every prospect has unique Prospect ID.
+ 3. Every approved customer has unique Customer Code.
+ 4. Prospect info auto-transfers to onboarding.
+ 5. Onboarding info auto-transfers to Customer Master after final approval.
+ 6. No duplicate records during module transfers.
+ 7. No onboarding before Commercial Approved.
+ 8. No customer code until mandatory + final approvals done.
+ 9. Only authorised users approve onboarding.
+10. Existing customers can be added directly to Customer Master.
+11. GSTIN + customer name checked for possible duplicates.
+12. Important activities keep user-wise history.
+13. Role-based permissions enforced everywhere.
+14. Ordinary users cannot permanently delete prospect/customer records.
+15. All forms, buttons, filters, reports, actions must work (no placeholders).
+
+--------------------------------------------------------------------------------
+15. END-TO-END WORKFLOW (ONE CONNECTED PROCESS)
+--------------------------------------------------------------------------------
+
+ Stage 1  – Sales login
+ Stage 2  – Create prospect → auto Prospect ID
+ Stage 3  – Pipeline: New → Calling → Meeting → Proposal → Negotiation
+            → Commercial Sent
+ Stage 4  – Commercial Approved
+ Stage 5  – Initiate onboarding (auto-copy prospect data)
+ Stage 6  – Document collection
+ Stage 7  – Department approvals: Finance → Operations → Commercial
+ Stage 8  – Final Admin approval
+ Stage 9  – Auto customer code
+ Stage 10 – Transfer to Existing Customer Master
+ Stage 11 – Customer activation
+
+--------------------------------------------------------------------------------
+16. QUALITY AND SECURITY
+--------------------------------------------------------------------------------
+
+- Secure login, session management, role-based access
+- Secure password storage
+- Input validation, duplicate prevention
+- Secure document uploads
+- DB backup / recovery planning
+- Error handling, activity logging
+- Protect unauthorised access
+- Safe simultaneous customer-code generation
+- Responsive UI
+- Clear success / error messages
+- Confirm before important actions
+- No dummy data as real business records
+- Dashboard numbers from real DB only
+- No non-working / placeholder controls
+
+--------------------------------------------------------------------------------
+17. MILESTONE DATES (PROJECT TARGETS)
+--------------------------------------------------------------------------------
+
+| Priority | Module / Activity                      | Target        |
+|----------|----------------------------------------|---------------|
+| 1        | User Login and Access Management       | 4 Dec 2026    |
+| 2        | Sales Prospect Management              | 11 Dec 2026   |
+| 3        | New Customer Onboarding                | 18 Dec 2026   |
+| 4        | Existing Customer Master               | 18 Dec 2026   |
+| 5        | Integration + Customer Code Generation | 21 Dec 2026   |
+| 6        | Testing and User Training              | 28 Dec 2026   |
+| 7        | Final Approval                         | 30 Dec 2026   |
+| 8        | Go-Live                                | 1 Jan 2027    |
+
+--------------------------------------------------------------------------------
+18. DEVELOPMENT APPROACH (FOR BUILD)
+--------------------------------------------------------------------------------
+
+Do NOT generate the entire app in one step.
+
+Phase A – Requirement understanding
+- Modules, workflow, relationships, roles, approval dependencies
+
+Phase B – Application planning (review first)
+- Navigation, module structure, DB relationships
+- Permission structure
+- Prospect → Onboarding → Customer flows
+- Customer code generation process
+
+Phase C – Module development order
+  1. Login and User Management
+  2. Dashboard
+  3. Sales Prospect Management
+  4. Follow-up Management
+  5. Sales Pipeline
+  6. Customer Onboarding
+  7. Document Management
+  8. Department Approvals
+  9. Customer Code Generation
+ 10. Existing Customer Master
+ 11. Reports and Export
+ 12. Notifications and Audit Trail
+
+Phase D – Integration (auto data move, no re-entry)
+Phase E – Testing (full E2E + each role)
+Phase F – Final review before go-live
+
+FINAL OBJECTIVE
+Build a complete ReeferON business CRM — full journey from new lead to
+approved and activated customer. Prioritise data accuracy, connected
+workflows, approval control, ease of use, security and scalability.
+
+CURRENT BUILD NOTE (see PHASES.md for live status)
+- Foundation + Prospect create/list/view/edit already started
+- Temp System User used until login module is wired
+- Next focus: Pipeline + Follow-ups, then Onboarding chain
+- Always follow THIS file for business rules and required fields
+
+--------------------------------------------------------------------------------
+19. HOW THIS CRM WORKS (BEGINNER GUIDE + EXAMPLE)
+--------------------------------------------------------------------------------
+
+What is a CRM?
+CRM = Customer Relationship Management.
+Simple meaning: one software where Sales keeps every lead, every call,
+every approval, and every customer — so data is not lost in Excel,
+WhatsApp or notebooks.
+
+Think of it like a school admission file:
+  Lead (interested student) → interviews → documents → principal approval
+  → admission number → student register.
+Same idea for ReeferON customers.
+
+Three big boxes (connected, not separate):
+
+  BOX 1 – Prospect (Sales lead)
+    "Someone may give us business."
+
+  BOX 2 – Onboarding (paperwork + approvals)
+    "Deal is almost done; collect docs and get approvals."
+
+  BOX 3 – Customer Master (official customer)
+    "Approved customer with unique code REO-CUS-xxxx."
+
+EXAMPLE STORY (Ice cream company)
+
+Day 1 – New Lead
+  Salesperson Rahul meets "CoolTreat Ice Cream Pvt Ltd" in Pune.
+  They need Frozen transportation (14ft vehicles).
+  Rahul opens CRM → Create Prospect.
+  System gives Prospect ID: REO-LEAD-0042
+  Company, contact, mobile, service, temperature saved.
+  WHY useful: lead is now in system, not only in Rahul's phone.
+
+Day 2–10 – Sales Process (Pipeline)
+  Rahul updates stage:
+    New Prospect → Calling → Meeting → Proposal Sent
+    → Negotiation → Commercial Sent
+  He also sets Next Follow-up Date (e.g. call again Friday).
+  WHY useful: Manager sees "Rahul has 5 overdue follow-ups"
+  and "CoolTreat is in Negotiation" without asking WhatsApp.
+
+Day 11 – Commercial Approved
+  Customer says yes to rates.
+  Rahul sets stage = Commercial Approved.
+  Button appears: Initiate Customer Onboarding.
+  WHY useful: only serious deals enter paperwork; random leads don't.
+
+Day 12 – Onboarding (no retyping)
+  CRM copies company name, contact, mobile, service, temperature
+  from the prospect automatically.
+  Rahul only adds GSTIN, addresses, vehicle size, origin/destination,
+  uploads GST/PAN/KYC/Agreement/PO.
+  WHY useful: same company details typed only once → fewer mistakes.
+
+Day 13–15 – Approvals
+  Finance checks GST/KYC/payment terms/credit limit.
+  Operations checks vehicle/route/storage readiness.
+  Commercial checks rates/agreement.
+  Admin gives final approval.
+  WHY useful: controlled process; wrong or incomplete customer
+  cannot get a customer code.
+
+Day 16 – Customer Code + Customer Master
+  System creates REO-CUS-0187 automatically.
+  CoolTreat appears in Existing Customer Master as Active.
+  Prospect stage becomes Customer Activated.
+  WHY useful: one official customer list for whole company;
+  Ops/Finance can search REO-CUS-0187 later.
+
+Also supported:
+  - Existing old customers can be added directly to Customer Master
+    (skip prospect pipeline), with duplicate check on GSTIN + name.
+  - Ordinary users cannot permanently delete; use Inactive / Cancelled.
+
+--------------------------------------------------------------------------------
+20. EMAIL BRIEFING VERIFICATION (Rahul email vs this PLANNING.txt)
+--------------------------------------------------------------------------------
+
+Source checked: "Hi Rahul… CRM development details" email brief
+(New Lead → Sales → Commercial Approval → Onboarding → Customer Code
+ → Existing Customer Master)
+
+| Email item                              | In PLANNING.txt? | Notes                          |
+|-----------------------------------------|------------------|--------------------------------|
+| 3 connected modules                     | YES              | Sections 1–2, rules 4–6        |
+| Do not build 3 independent forms        | YES              | Important Development Rule     |
+| Step 1 Login + user fields              | YES              | Section 3                      |
+| Admin create/edit/activate users        | YES              | Section 3                      |
+| Sales sees own; Mgmt sees all           | YES              | Section 3                      |
+| Finance/Ops see onboarding              | YES              | Section 3                      |
+| Secure password (not visible to Admin)  | YES              | Section 3                      |
+| Who created/updated each record         | YES              | Sections 3, 13, 14             |
+| Step 2 Prospect form fields             | YES              | Section 4.1                    |
+| Auto Prospect ID REO-LEAD-xxxx          | YES              | Section 4                      |
+| Pipeline stages 1–9 + Lost/Hold/Cancel  | YES              | Section 4.3                    |
+| Stage history + follow-up date          | YES              | Section 4.3 + Section 5        |
+| Onboarding only after Commercial Appr.  | YES              | Section 4.3 + rule 7           |
+| Step 3 Onboarding customer fields       | YES              | Section 6.1                    |
+| Business/service/vehicle/storage fields | YES              | Section 6.2                    |
+| Docs: GST/PAN/KYC/Agreement/PO/Comm.    | YES              | Section 6.3                    |
+| Payment Terms + Credit Limit approval   | YES              | Section 7.1 Finance            |
+| Operations confirmation                 | YES              | Section 7.2                    |
+| Auto customer code REO-CUS-xxxx         | YES              | Section 8                      |
+| Transfer to Existing Customer Master    | YES              | Sections 8–9                   |
+| Step 4 Customer Master fields           | YES              | Section 9.1                    |
+| Direct add existing customers           | YES              | Section 9.2                    |
+| Keep old code OR Admin generates        | YES              | Section 9.2                    |
+| Duplicate check GSTIN + name            | YES              | Section 9.2 + rule 11          |
+| Step 5 Management dashboard cards       | YES              | Section 10.1                   |
+| Salesperson-wise leads                  | YES              | Section 10.1                   |
+| Step 6 Full workflow                    | YES              | Section 15                     |
+| Step 7 Ten developer instructions       | YES              | Sections 14 + 16               |
+| Priority dates Dec 2026 – Jan 2027      | YES              | Section 17                     |
+| PHP + MySQL web app                     | YES              | Header (stack)                 |
+
+EXTRA in PLANNING.txt (beyond short email — keep these too):
+- Follow-up module + Today/Upcoming/Overdue dashboard
+- Document Rejected status + replace rejected files
+- Notifications, Reports, Excel export detail
+- Audit trail (previous → new value)
+- Role list fuller (Super Admin, Finance, Operations, Management…)
+- Separate Commercial approval step + Final Admin approval
+- Quality/security checklist
+
+SMALL WORDING DIFFERENCES (same meaning — OK):
+- Email roles often say Admin/Sales/Approver/Viewer;
+  PLANNING uses fuller roles including Finance, Operations, Management.
+- Email doc status often Pending/Received/N/A;
+  PLANNING also allows Rejected (needed for corrections).
+- Email short flow skips spelling "Department Approvals";
+  PLANNING keeps Finance → Ops → Commercial → Admin clearly.
+
+VERDICT: Email requirements are COVERED in this PLANNING.txt.
+Use this file as the developer source of truth.
+If email and PLANNING ever conflict later, update THIS file first.
+
+================================================================================
+END OF PLANNING / REQUIREMENTS
+================================================================================
+

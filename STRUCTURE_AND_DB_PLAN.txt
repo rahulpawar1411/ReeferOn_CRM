@@ -1,0 +1,408 @@
+================================================================================
+REEFERON CRM – Application Structure + Database Relationship Plan
+FOR REVIEW (before next coding modules)
+================================================================================
+Related: PLANNING.txt (requirements) | PHASES.md (build status)
+Stack: PHP 8 + MySQL 8
+App URL: http://localhost/CRM/
+
+--------------------------------------------------------------------------------
+1. WHAT THIS PLAN IS FOR
+--------------------------------------------------------------------------------
+
+Before building more screens, we lock:
+  A) Menu / module structure (where user clicks)
+  B) Database tables and how they LINK (relationships)
+  C) How one lead becomes one customer (no duplicate typing)
+
+After you approve this plan → we build module by module.
+
+--------------------------------------------------------------------------------
+2. APPLICATION NAVIGATION (MENU STRUCTURE)
+--------------------------------------------------------------------------------
+
+Sidebar (planned full app):
+
+  Dashboard
+  Prospects
+     - All Prospects (list / search / filter)
+     - New Prospect
+     - View / Edit Prospect
+     - Change Pipeline Stage
+  Follow-ups
+     - Today / Upcoming / Overdue / Completed
+     - Add Follow-up
+  Onboarding
+     - Onboarding list
+     - Initiate from Prospect (only if Commercial Approved)
+     - View onboarding + documents
+  Approvals
+     - Finance queue
+     - Operations queue
+     - Commercial queue
+     - Admin final approval
+  Customers
+     - Customer Master list
+     - Add Existing Customer
+     - View / Edit customer
+  Reports
+     - Prospect / Pipeline / Follow-up / Onboarding / Customers
+     - Excel export
+  Notifications
+  Users (Admin)
+     - User list / create / activate-deactivate
+  Settings
+  Login / Logout
+
+NOW LIVE (already built):
+  Dashboard (basic counts)
+  Prospects list / create / view / edit
+  Temp user (no real login yet)
+
+--------------------------------------------------------------------------------
+3. FOLDER STRUCTURE (PHP MODULES)
+--------------------------------------------------------------------------------
+
+CRM/
+├── config/database.php
+├── includes/          (header, footer, functions)
+├── assets/css, js
+├── uploads/documents/
+├── sql/
+│   ├── schema.sql              (current: users + prospects + history)
+│   └── schema_phase2_plus.sql  (to add later: followups, onboarding…)
+├── modules/
+│   ├── prospects/     ✅ started
+│   ├── followups/     ⬜ next
+│   ├── onboarding/    ⬜ later
+│   ├── approvals/     ⬜ later
+│   ├── customers/     ⬜ later
+│   ├── reports/       ⬜ later
+│   ├── notifications/ ⬜ later
+│   └── users/         ⬜ login phase
+├── index.php          (dashboard)
+├── PLANNING.txt
+├── PHASES.md
+└── STRUCTURE_AND_DB_PLAN.txt   ← this file
+
+--------------------------------------------------------------------------------
+4. DATABASE RELATIONSHIP MAP (CORE)
+--------------------------------------------------------------------------------
+
+Plain English chain:
+
+  users
+    │  (salesperson / created_by / approver)
+    │
+    ▼
+  prospects  (REO-LEAD-xxxx)
+    │
+    ├──► prospect_stage_history   (every stage change)
+    ├──► followups                (calls / meetings)
+    │
+    └──► onboarding  (REO-ONB-xxxx)   [only after Commercial Approved]
+           │
+           ├──► onboarding_documents
+           ├──► onboarding_approvals  (Finance / Ops / Commercial / Admin)
+           │
+           └──► customers  (REO-CUS-xxxx)  [only after FINAL approval]
+                  │
+                  └──► (same docs / history referenced; no re-create of company)
+
+Support tables:
+  id_sequences   → safe auto IDs (LEAD / ONB / CUS)
+  audit_logs     → who changed what
+  notifications  → alerts to users
+
+ASCII diagram:
+
+  ┌─────────┐
+  │  users  │
+  └────┬────┘
+       │ salesperson_id / created_by / updated_by / approver_id
+       ▼
+  ┌────────────┐     1:N      ┌────────────────────────┐
+  │ prospects  │─────────────►│ prospect_stage_history │
+  └─────┬──────┘              └────────────────────────┘
+        │
+        │ 1:N
+        ▼
+  ┌────────────┐
+  │ followups  │
+  └────────────┘
+        │
+        │ prospect 1 : onboarding 0..1
+        ▼
+  ┌────────────┐     1:N      ┌──────────────────────┐
+  │ onboarding │─────────────►│ onboarding_documents │
+  └─────┬──────┘              └──────────────────────┘
+        │
+        │ 1:N
+        ▼
+  ┌──────────────────────┐
+  │ onboarding_approvals │
+  └──────────┬───────────┘
+             │ after final Approved
+             ▼
+        ┌───────────┐
+        │ customers │
+        └───────────┘
+
+Relationship rules (IMPORTANT):
+  1. One Prospect → many Follow-ups
+  2. One Prospect → many Stage History rows
+  3. One Prospect → at most ONE active Onboarding
+  4. One Onboarding → many Documents
+  5. One Onboarding → many Approval rows (by department)
+  6. One Onboarding → at most ONE Customer (after final approval)
+  7. Existing customers (direct add) may have NO prospect/onboarding link
+     (source = Existing Customer)
+
+--------------------------------------------------------------------------------
+5. TABLE PLAN (DETAIL)
+--------------------------------------------------------------------------------
+
+A) ALREADY IN DB (schema.sql) ✅
+--------------------------------
+users
+  id, employee_id, employee_name, email, mobile, user_id, password_hash,
+  department, role, status, created_at, updated_at
+
+id_sequences
+  seq_name (prospect/onboarding/customer), prefix, next_number, pad_length
+
+prospects
+  id, prospect_id, lead_creation_date, company_name, contact_person,
+  designation, mobile, email, business_type, industry, city,
+  service_required, temperature_requirement, requirement_details,
+  estimated_monthly_business, lead_source,
+  salesperson_id → users.id, salesperson_name,
+  pipeline_stage, next_followup_date, remarks, status,
+  created_by → users.id, updated_by, created_at, updated_at
+
+prospect_stage_history
+  id, prospect_pk → prospects.id, from_stage, to_stage, remarks,
+  updated_by, updated_by_name, created_at
+
+audit_logs
+  id, module, record_id, action, old_value, new_value,
+  performed_by, performed_by_name, created_at
+
+
+B) TO ADD NEXT (Phase 2 – Follow-ups) ⬜
+---------------------------------------
+followups
+  id
+  prospect_pk          → prospects.id   (FK)
+  prospect_id          (copy for easy display, e.g. REO-LEAD-0042)
+  company_name         (copy/display)
+  contact_person       (copy/display)
+  followup_date        DATE
+  interaction_type     ENUM(Phone Call, Email, Meeting, WhatsApp, Other)
+  discussion_summary   TEXT
+  next_followup_date   DATE NULL
+  remarks              TEXT
+  status               ENUM(Open, Completed, Cancelled)
+  created_by           → users.id
+  created_by_name
+  created_at, updated_at
+
+When a follow-up is saved:
+  - also update prospects.next_followup_date if next date given
+  - write audit_logs row
+
+
+C) TO ADD LATER (Onboarding) ⬜
+-------------------------------
+onboarding
+  id
+  onboarding_id        REO-ONB-xxxx (unique)
+  prospect_pk          → prospects.id (unique when used for new flow)
+  prospect_id          REO-LEAD-xxxx
+  -- copied from prospect --
+  customer_name, brand_name, business_type, contact_person,
+  mobile, email, service_required, temperature_requirement
+  -- extra fields --
+  registered_address, billing_address, operating_address
+  gstin, pan
+  vehicle_requirement  ENUM(8ft,10ft,14ft,20ft,Other)
+  storage_requirement  ENUM(Ambient,Chiller,Frozen)
+  origin, destination
+  estimated_monthly_volume
+  business_start_date
+  commercial_reference
+  overall_status       ENUM(Draft, Submitted, In Approval, Approved,
+                            Rejected, Cancelled)
+  created_by → users.id, updated_by, created_at, updated_at
+
+onboarding_documents
+  id
+  onboarding_pk        → onboarding.id
+  doc_type             ENUM(GST Certificate, PAN Card, Company KYC,
+                            Customer Agreement, Purchase Order / Work Order,
+                            Commercial Approval)
+  file_name, file_path, file_size, mime_type
+  status               ENUM(Pending, Received, Rejected, Not Applicable)
+  uploaded_by → users.id, uploaded_by_name
+  remarks
+  created_at, updated_at
+
+onboarding_approvals
+  id
+  onboarding_pk        → onboarding.id
+  department           ENUM(Finance, Operations, Commercial, Admin)
+  status               ENUM(Pending, Approved, Rejected)
+  remarks
+  approver_id → users.id NULL
+  approver_name
+  decided_at
+  created_at, updated_at
+
+Finance checks inside remarks / optional detail fields later:
+  payment_terms, credit_limit (can also live on onboarding/customers)
+
+
+D) TO ADD LATER (Customer Master) ⬜
+-----------------------------------
+customers
+  id
+  customer_code        REO-CUS-xxxx (unique)
+  source               ENUM(New Onboarding, Existing Customer)
+  onboarding_pk        → onboarding.id NULL (for new flow)
+  prospect_pk          → prospects.id NULL
+  customer_name, brand_name, business_type
+  contact_person, mobile, email, gstin
+  registered_address, billing_address, operating_location
+  services, temperature_requirement
+  commercial_details, payment_terms, credit_limit
+  agreement_start_date, agreement_end_date
+  account_owner_id → users.id
+  account_owner_name
+  status               ENUM(Active, Inactive, On Hold)
+  created_by, updated_by, created_at, updated_at
+
+Duplicate check (application logic, not only DB):
+  before insert → search same GSTIN and/or similar customer_name
+  show matches; do NOT auto-merge
+
+
+E) SUPPORT (later) ⬜
+--------------------
+notifications
+  id, user_id → users.id, title, message, link_url,
+  is_read, created_at
+
+--------------------------------------------------------------------------------
+6. HOW DATA MOVES (NO RE-ENTRY)
+--------------------------------------------------------------------------------
+
+STEP A – Create Prospect
+  User fills company + contact + service…
+  System saves prospects + generates REO-LEAD-xxxx
+  System writes first stage history: → New Prospect
+
+STEP B – Pipeline + Follow-ups
+  User changes stage → prospect_stage_history row
+  User adds follow-up → followups row (+ update next_followup_date)
+
+STEP C – Commercial Approved
+  Stage = Commercial Approved
+  UI shows button: Initiate Customer Onboarding
+
+STEP D – Initiate Onboarding
+  INSERT onboarding
+  COPY from prospect: name, contact, mobile, email, business_type,
+       service, temperature, etc.
+  User adds only EXTRA: addresses, GSTIN, PAN, vehicle, route, docs
+  Create approval rows: Finance, Operations, Commercial, Admin = Pending
+  Prospect stage → Onboarding
+
+STEP E – Approvals
+  Each department updates onboarding_approvals
+  If Rejected → overall_status Rejected → user corrects → resubmit
+  If all Approved + Admin Approved → go to code generation
+
+STEP F – Customer Code + Customer Master
+  Lock id_sequences (customer) → next REO-CUS-xxxx
+  INSERT customers (copy from onboarding; source = New Onboarding)
+  Prospect stage → Customer Activated
+  Never create a second manual customer for same onboarding
+
+STEP G – Direct Existing Customer (alternate path)
+  Admin/authorised user adds to customers with source = Existing Customer
+  prospect_pk / onboarding_pk = NULL
+  Keep old code if known, else generate new
+  Duplicate warning on GSTIN + name
+
+--------------------------------------------------------------------------------
+7. ID GENERATION (SAFE)
+--------------------------------------------------------------------------------
+
+Table: id_sequences
+
+  prospect   → REO-LEAD-0001
+  onboarding → REO-ONB-0001
+  customer   → REO-CUS-0001
+
+Rules:
+  - Use DB transaction + row lock when generating next number
+  - User cannot edit these IDs
+  - Customer code only after final Admin approval
+
+--------------------------------------------------------------------------------
+8. PERMISSION SKETCH (WHO SEES WHAT)
+--------------------------------------------------------------------------------
+
+Salesperson
+  Own prospects, own follow-ups, initiate onboarding for own Commercial Approved
+
+Management
+  All prospects, pipeline, customers, dashboards
+
+Finance
+  Onboarding docs + Finance approval queue
+
+Operations
+  Ops approval queue (vehicle/storage/route)
+
+Commercial Approver
+  Commercial approval queue
+
+Admin / Super Admin
+  Users, final approval, customer code, settings
+
+Viewer
+  Read-only where allowed
+
+(Enforced later with real login; until then TEMP_USER = System User)
+
+--------------------------------------------------------------------------------
+9. BUILD ORDER AFTER THIS REVIEW
+--------------------------------------------------------------------------------
+
+  1. ✅ You review / approve THIS plan
+  2. Phase 2 code: Pipeline stage change UI + Follow-ups module + followups table
+  3. Onboarding module + documents + approval tables
+  4. Customer code generation + Customer Master
+  5. Dashboards / Reports / Notifications polish
+  6. Real Login + role enforcement
+  7. Testing → Go-Live 1 Jan 2027
+
+--------------------------------------------------------------------------------
+10. REVIEW CHECKLIST (PLEASE CONFIRM)
+--------------------------------------------------------------------------------
+
+Please confirm:
+  [ ] Menu structure looks correct
+  [ ] Relationship chain Prospect → Onboarding → Customer is correct
+  [ ] One prospect = one onboarding = one customer (new flow) is OK
+  [ ] Existing customers can skip prospect pipeline (OK)
+  [ ] Auto IDs REO-LEAD / REO-ONB / REO-CUS are OK
+  [ ] Follow-ups as separate module linked to prospect is OK
+  [ ] Approval order Finance → Operations → Commercial → Admin is OK
+
+After confirmation → start Phase 2 coding (Pipeline + Follow-ups).
+
+================================================================================
+END OF STRUCTURE + DB RELATIONSHIP PLAN
+================================================================================
