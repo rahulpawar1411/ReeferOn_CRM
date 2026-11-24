@@ -35,6 +35,7 @@ $user = current_user();
                 if ($nUnread > 0): ?> (<?= (int) $nUnread ?>)<?php endif;
             ?></a>
             <a class="<?= $currentPage === 'activity' ? 'active' : '' ?>" href="<?= e(base_url('modules/activity/index.php')) ?>">Activity</a>
+            <a class="<?= $currentPage === 'help' ? 'active' : '' ?>" href="<?= e(base_url('modules/help/index.php')) ?>">Help</a>
         </nav>
         <div class="sidebar-foot">
             Logged in as<br><strong><?= e($user['name']) ?></strong>

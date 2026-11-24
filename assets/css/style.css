@@ -219,6 +219,30 @@ table.data tr:nth-child(even) { background: #fafbfc; }
   color: #fff;
 }
 
+.help-steps {
+  line-height: 1.7;
+  padding-left: 20px;
+}
+.help-next {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #c5d2e6;
+  background: #f5f8fc;
+}
+.help-next ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.help-next strong {
+  color: #1a3a6b;
+}
+code {
+  background: #eef2f8;
+  padding: 1px 6px;
+  border: 1px solid #d5dde8;
+  font-size: 12px;
+}
+
 @media (max-width: 800px) {
   .app { flex-direction: column; }
   .sidebar { width: 100%; }

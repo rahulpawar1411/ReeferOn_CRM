@@ -172,6 +172,7 @@ require_once __DIR__ . '/includes/header.php';
     <a class="btn btn-secondary" href="<?= e(base_url('modules/reports/index.php')) ?>">Reports</a>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/notifications/index.php')) ?>">Notifications</a>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Customers</a>
+    <a class="btn btn-secondary" href="<?= e(base_url('modules/help/index.php')) ?>">Help – How it works</a>
 </div>
 
 <div class="card">
