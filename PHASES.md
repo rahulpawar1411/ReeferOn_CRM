@@ -14,7 +14,7 @@
 |-------|------|--------|--------|
 | 0 | Foundation (folder + DB design) | Before coding | DONE (simple UI) |
 | 1 | Sales Prospect Management | 11 Dec 2026 | DONE (create/list/view/edit) |
-| 2 | Pipeline + Follow-up | Mid Dec 2026 | Pending |
+| 2 | Pipeline + Follow-up | Mid Dec 2026 | DONE (stage change + follow-ups) |
 | 3 | Customer Onboarding + Documents | 18 Dec 2026 | Pending |
 | 4 | Department Approvals + Customer Code | 21 Dec 2026 | Pending |
 | 5 | Existing Customer Master | 18–21 Dec 2026 | Pending |
@@ -272,14 +272,15 @@ Sales login (later)
 
 ## What we build RIGHT NOW
 
-**Start Phase 0 → then Phase 1 (Prospects).**
+**Phase 0–2 done. Next = Phase 3 (Customer Onboarding + Documents).**
 
-1. Create folders + `config/database.php`
-2. Create `sql/schema.sql` (core tables)
-3. Basic layout CSS
-4. Prospect create + list + view/edit
+Phase 2 delivered:
+1. `followups` table (`sql/schema_phase2.sql`)
+2. Change Stage screen (remarks + history)
+3. Follow-ups: Today / Upcoming / Overdue / Completed
+4. Prospect view shows follow-ups + stage history
 
-Authentication waits until Phase 7.
+Authentication waits until login milestone / Phase 7.
 
 ---
 

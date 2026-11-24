@@ -24,6 +24,7 @@ $user = current_user();
             <a class="<?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= e(base_url('index.php')) ?>">Dashboard</a>
             <a class="<?= $currentPage === 'prospects' ? 'active' : '' ?>" href="<?= e(base_url('modules/prospects/index.php')) ?>">Prospects</a>
             <a class="<?= $currentPage === 'prospect_create' ? 'active' : '' ?>" href="<?= e(base_url('modules/prospects/create.php')) ?>">New Prospect</a>
+            <a class="<?= $currentPage === 'followups' ? 'active' : '' ?>" href="<?= e(base_url('modules/followups/index.php')) ?>">Follow-ups</a>
         </nav>
         <div class="sidebar-foot">
             Logged in as<br><strong><?= e($user['name']) ?></strong>

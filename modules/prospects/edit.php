@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $id,
                     $oldStage,
                     $pipeline_stage,
-                    'Stage updated from edit form',
+                    $remarks !== '' ? $remarks : 'Stage updated from edit form',
                     $user['id'],
                     $user['name'],
                 ]);

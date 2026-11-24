@@ -143,3 +143,68 @@ function pipeline_stages(): array
         'Cancelled',
     ];
 }
+
+function interaction_types(): array
+{
+    return ['Phone Call', 'Email', 'Meeting', 'WhatsApp', 'Other'];
+}
+
+/**
+ * Change prospect pipeline stage + write history + audit.
+ */
+function change_prospect_stage(int $prospectPk, string $toStage, string $remarks, ?string $nextFollowupDate = null): void
+{
+    if (!in_array($toStage, pipeline_stages(), true)) {
+        throw new InvalidArgumentException('Invalid pipeline stage.');
+    }
+
+    $pdo = db();
+    $user = current_user();
+    $pdo->beginTransaction();
+
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM prospects WHERE id = ? FOR UPDATE');
+        $stmt->execute([$prospectPk]);
+        $p = $stmt->fetch();
+        if (!$p) {
+            throw new RuntimeException('Prospect not found.');
+        }
+
+        $fromStage = $p['pipeline_stage'];
+
+        $upd = $pdo->prepare(
+            'UPDATE prospects SET pipeline_stage = ?, next_followup_date = COALESCE(?, next_followup_date), updated_by = ? WHERE id = ?'
+        );
+        $upd->execute([
+            $toStage,
+            ($nextFollowupDate !== null && $nextFollowupDate !== '') ? $nextFollowupDate : null,
+            $user['id'],
+            $prospectPk,
+        ]);
+
+        if ($fromStage !== $toStage) {
+            $hist = $pdo->prepare(
+                'INSERT INTO prospect_stage_history
+                 (prospect_pk, from_stage, to_stage, remarks, updated_by, updated_by_name)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $hist->execute([
+                $prospectPk,
+                $fromStage,
+                $toStage,
+                $remarks !== '' ? $remarks : null,
+                $user['id'],
+                $user['name'],
+            ]);
+
+            write_audit('prospects', $p['prospect_id'], 'STAGE_CHANGE', $fromStage, $toStage);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}

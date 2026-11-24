@@ -19,14 +19,28 @@ $histStmt = db()->prepare(
 $histStmt->execute([$id]);
 $history = $histStmt->fetchAll();
 
+$fuStmt = db()->prepare(
+    'SELECT * FROM followups WHERE prospect_pk = ? ORDER BY followup_date DESC, id DESC LIMIT 20'
+);
+$fuStmt->execute([$id]);
+$followups = $fuStmt->fetchAll();
+
 $pageTitle = 'Prospect ' . $p['prospect_id'];
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
     <a class="btn" href="<?= e(base_url('modules/prospects/edit.php?id=' . $p['id'])) ?>">Edit</a>
+    <a class="btn" href="<?= e(base_url('modules/prospects/stage.php?id=' . $p['id'])) ?>">Change Stage</a>
+    <a class="btn" href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add Follow-up</a>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Back to List</a>
 </div>
+
+<?php if ($p['pipeline_stage'] === 'Commercial Approved'): ?>
+    <div class="alert alert-success">
+        Commercial Approved — next phase will enable <strong>Initiate Customer Onboarding</strong> (not built yet).
+    </div>
+<?php endif; ?>
 
 <div class="card">
     <h2>Prospect Details</h2>
@@ -54,6 +68,38 @@ require_once __DIR__ . '/../../includes/header.php';
         <dt>Created At</dt><dd><?= e($p['created_at']) ?></dd>
         <dt>Updated At</dt><dd><?= e($p['updated_at'] ?? '-') ?></dd>
     </dl>
+</div>
+
+<div class="card">
+    <h2>Follow-ups</h2>
+    <?php if (!$followups): ?>
+        <div class="empty">No follow-ups yet. <a href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add one</a>.</div>
+    <?php else: ?>
+        <table class="data">
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Summary</th>
+                <th>Next</th>
+                <th>Status</th>
+                <th>By</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($followups as $f): ?>
+                <tr>
+                    <td><?= e($f['followup_date']) ?></td>
+                    <td><?= e($f['interaction_type']) ?></td>
+                    <td><?= e($f['discussion_summary'] ?? '-') ?></td>
+                    <td><?= e($f['next_followup_date'] ?? '-') ?></td>
+                    <td><span class="badge"><?= e($f['status']) ?></span></td>
+                    <td><?= e($f['created_by_name']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
 </div>
 
 <div class="card">

@@ -12,6 +12,8 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 
 - Phase 0: Foundation (done)
 - Phase 1: Sales Prospect Management (done – simple UI)
+- Phase 2: Pipeline stage change + Follow-ups (done)
+- Next: Phase 3 Onboarding
 - Auth: later (temp user = System User)
 - UI/UX polish: later
 
@@ -21,6 +23,7 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 2. First time only: open [http://localhost/CRM/setup_install.php](http://localhost/CRM/setup_install.php) to create the database.
 3. Open: [http://localhost/CRM/](http://localhost/CRM/)
 4. Create prospect: [http://localhost/CRM/modules/prospects/create.php](http://localhost/CRM/modules/prospects/create.php)
+5. Follow-ups: [http://localhost/CRM/modules/followups/index.php](http://localhost/CRM/modules/followups/index.php)
 
 Project folder: `C:\wamp64\www\CRM`.
 

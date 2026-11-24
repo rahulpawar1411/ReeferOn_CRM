@@ -166,6 +166,27 @@ table.data tr:nth-child(even) { background: #fafbfc; }
 
 .empty { padding: 20px; text-align: center; color: #666; border: 1px dashed #ccc; background: #fff; }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.tabs a {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #1a3a6b;
+  font-size: 13px;
+}
+.tabs a:hover { background: #eef2f8; text-decoration: none; }
+.tabs a.active {
+  background: #1a3a6b;
+  border-color: #1a3a6b;
+  color: #fff;
+}
+
 @media (max-width: 800px) {
   .app { flex-direction: column; }
   .sidebar { width: 100%; }
