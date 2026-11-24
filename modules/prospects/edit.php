@@ -127,7 +127,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Edit Prospect</h2>
-    <p>Prospect ID <strong><?= e($p['prospect_id']) ?></strong> cannot be changed.</p>
+    <p class="step-note"><strong>Edit Lead:</strong> Update company and contact details. Prospect ID <strong><?= e($p['prospect_id']) ?></strong> cannot be changed. Prefer <em>Change Stage</em> for pipeline updates (saves remarks in history).</p>
 
     <?php if ($errors): ?>
         <div class="alert alert-error">

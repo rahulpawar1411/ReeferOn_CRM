@@ -52,6 +52,7 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card">
+    <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups.</p>
     <div class="toolbar">
         <a class="btn" href="<?= e(base_url('modules/prospects/create.php')) ?>">+ New Prospect</a>
     </div>

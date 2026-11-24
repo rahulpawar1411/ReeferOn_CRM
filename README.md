@@ -13,7 +13,11 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 - Phase 0: Foundation (done)
 - Phase 1: Sales Prospect Management (done – simple UI)
 - Phase 2: Pipeline stage change + Follow-ups (done)
-- Next: Phase 3 Onboarding
+- Phase 3: Customer Onboarding + Documents (done)
+- Phase 4: Admin Approval + Customer Code (done – direct Admin only)
+- Phase 5: Customer Master edit + direct existing add + GSTIN/name duplicate check (done)
+- Phase 6: Dashboard / Reports / Notifications / Activity (done)
+- Next: Phase 7 Login + role-based access
 - Auth: later (temp user = System User)
 - UI/UX polish: later
 
@@ -24,6 +28,13 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 3. Open: [http://localhost/CRM/](http://localhost/CRM/)
 4. Create prospect: [http://localhost/CRM/modules/prospects/create.php](http://localhost/CRM/modules/prospects/create.php)
 5. Follow-ups: [http://localhost/CRM/modules/followups/index.php](http://localhost/CRM/modules/followups/index.php)
+6. Approvals: [http://localhost/CRM/modules/approvals/index.php](http://localhost/CRM/modules/approvals/index.php)
+7. Customers: [http://localhost/CRM/modules/customers/index.php](http://localhost/CRM/modules/customers/index.php)
+8. Reports: [http://localhost/CRM/modules/reports/index.php](http://localhost/CRM/modules/reports/index.php)
+9. Notifications: [http://localhost/CRM/modules/notifications/index.php](http://localhost/CRM/modules/notifications/index.php)
+
+If you already installed earlier (multi-dept approvals), import `sql/migrate_admin_only_approval.sql` once in phpMyAdmin.  
+If Notifications page errors, import `sql/schema_phase6.sql` once.
 
 Project folder: `C:\wamp64\www\CRM`.
 

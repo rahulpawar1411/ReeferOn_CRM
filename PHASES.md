@@ -15,10 +15,10 @@
 | 0 | Foundation (folder + DB design) | Before coding | DONE (simple UI) |
 | 1 | Sales Prospect Management | 11 Dec 2026 | DONE (create/list/view/edit) |
 | 2 | Pipeline + Follow-up | Mid Dec 2026 | DONE (stage change + follow-ups) |
-| 3 | Customer Onboarding + Documents | 18 Dec 2026 | Pending |
-| 4 | Department Approvals + Customer Code | 21 Dec 2026 | Pending |
-| 5 | Existing Customer Master | 18–21 Dec 2026 | Pending |
-| 6 | Dashboard + Reports + Notifications | 28 Dec 2026 | Pending |
+| 3 | Customer Onboarding + Documents | 18 Dec 2026 | DONE |
+| 4 | Admin Approval + Customer Code | 21 Dec 2026 | DONE (direct Admin only) |
+| 5 | Existing Customer Master | 18–21 Dec 2026 | DONE (list/view/edit + direct add + dup check) |
+| 6 | Dashboard + Reports + Notifications | 28 Dec 2026 | DONE |
 | 7 | Authentication + Roles (LAST) | Before go-live | Pending |
 | 8 | Testing + Training + Go-Live | 28 Dec 2026 – 1 Jan 2027 | Pending |
 
@@ -152,29 +152,33 @@ New Prospect → Calling → Meeting → Proposal Sent → Negotiation → Comme
 
 ---
 
-## Phase 4 – Department Approvals + Customer Code
+## Phase 4 – Admin Approval + Customer Code
 
-**Goal:** Controlled approvals, then unique customer code.
+**Goal:** After details + documents are complete, Admin approves once → unique customer code.
+
+### Locked decision
+Direct **Admin** approval only (Finance / Ops / Commercial steps skipped).  
+Reason: all details are filled before submit, so one Admin gate is enough.
 
 ### Approval flow
-1. Finance (KYC, payment terms, credit limit)
-2. Operations (service, vehicle, storage, route)
-3. Commercial (rates, agreement, reference)
-4. Final Admin approval
-5. Auto generate `REO-CUS-0001`
-6. Transfer to Customer Master (no duplicate entry)
+1. Sales submits onboarding (details + docs ready)
+2. Admin Approve / Reject + remarks
+3. On Approve → auto generate `REO-CUS-0001`
+4. Transfer to Customer Master (no duplicate entry)
+5. Prospect stage → Customer Activated  
+Reject → correct → resubmit → Admin again
 
 ### Build
-1. Approval screens per department
-2. Approve / Reject + remarks + history
-3. Resubmit after rejection
-4. Show which approval is pending
-5. Safe customer-code sequence (no duplicates under parallel clicks)
+1. Approvals queue (Pending / Done)
+2. Approve / Reject screen + remarks
+3. Resubmit after rejection (resets Admin to Pending)
+4. Safe customer-code sequence (FOR UPDATE on `id_sequences`)
+5. Customer Master list/view for generated codes
 
 ### Exit checklist
-- [ ] Code blocked until all mandatory approvals + final Admin
-- [ ] One unique code per approved onboarding
-- [ ] Prospect stage moves to Onboarding / Customer Activated
+- [x] Code only after Admin Approve
+- [x] One unique code per approved onboarding
+- [x] Prospect stage moves to Customer Activated
 
 ---
 
@@ -192,9 +196,9 @@ New Prospect → Calling → Meeting → Proposal Sent → Negotiation → Comme
 7. Source flag: `New Onboarding` vs `Existing Customer`
 
 ### Exit checklist
-- [ ] Approved onboarding appears once in Customer Master
-- [ ] Direct add works with duplicate warning
-- [ ] No permanent delete for normal users
+- [x] Approved onboarding appears once in Customer Master
+- [x] Direct add works with duplicate warning (GSTIN + name)
+- [x] No permanent delete for normal users (Active / Inactive / On Hold)
 
 ---
 
@@ -210,9 +214,9 @@ New Prospect → Calling → Meeting → Proposal Sent → Negotiation → Comme
 5. Activity / audit trail views
 
 ### Exit checklist
-- [ ] Dashboard counts match real DB rows
-- [ ] Export works for authorised actions
-- [ ] No placeholder buttons
+- [x] Dashboard counts match real DB rows
+- [x] Export works (CSV / Excel)
+- [x] Notifications + activity trail (no placeholder buttons)
 
 ---
 
@@ -262,7 +266,7 @@ Sales login (later)
     → Commercial Approved
     → Initiate Onboarding (auto-copy data)
     → Documents
-    → Finance → Operations → Commercial → Admin
+    → Admin Approval
     → Customer Code (REO-CUS-xxxx)
     → Existing Customer Master
     → Customer Activated
@@ -272,13 +276,14 @@ Sales login (later)
 
 ## What we build RIGHT NOW
 
-**Phase 0–2 done. Next = Phase 3 (Customer Onboarding + Documents).**
+**Phase 0–6 done. Next = Phase 7 (Login + Roles + server-side access).**
 
-Phase 2 delivered:
-1. `followups` table (`sql/schema_phase2.sql`)
-2. Change Stage screen (remarks + history)
-3. Follow-ups: Today / Upcoming / Overdue / Completed
-4. Prospect view shows follow-ups + stage history
+Phase 6 delivered:
+1. Dashboard summary cards + salesperson-wise + recent customers/activity
+2. Global search (prospect / onboarding / customer)
+3. Reports module + CSV Excel export
+4. Notifications table + live alerts + history
+5. Activity / audit trail page
 
 Authentication waits until login milestone / Phase 7.
 
@@ -294,4 +299,5 @@ Authentication waits until login milestone / Phase 7.
 | Design | White background, navy + grey, corporate |
 | Modules | Connected, no duplicate re-entry |
 | Delete policy | Soft status only (Inactive / Cancelled) |
-| Customer code | Only after final Admin approval |
+| Customer code | Only after Admin approval |
+| Approval style | Direct Admin only (no Finance/Ops/Commercial steps) |

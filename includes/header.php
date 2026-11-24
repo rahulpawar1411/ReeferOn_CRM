@@ -25,6 +25,16 @@ $user = current_user();
             <a class="<?= $currentPage === 'prospects' ? 'active' : '' ?>" href="<?= e(base_url('modules/prospects/index.php')) ?>">Prospects</a>
             <a class="<?= $currentPage === 'prospect_create' ? 'active' : '' ?>" href="<?= e(base_url('modules/prospects/create.php')) ?>">New Prospect</a>
             <a class="<?= $currentPage === 'followups' ? 'active' : '' ?>" href="<?= e(base_url('modules/followups/index.php')) ?>">Follow-ups</a>
+            <a class="<?= $currentPage === 'onboarding' ? 'active' : '' ?>" href="<?= e(base_url('modules/onboarding/index.php')) ?>">Onboarding</a>
+            <a class="<?= $currentPage === 'approvals' ? 'active' : '' ?>" href="<?= e(base_url('modules/approvals/index.php')) ?>">Approvals</a>
+            <a class="<?= $currentPage === 'customers' ? 'active' : '' ?>" href="<?= e(base_url('modules/customers/index.php')) ?>">Customers</a>
+            <a class="<?= $currentPage === 'customer_create' ? 'active' : '' ?>" href="<?= e(base_url('modules/customers/create.php')) ?>">Add Existing Customer</a>
+            <a class="<?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= e(base_url('modules/reports/index.php')) ?>">Reports</a>
+            <a class="<?= $currentPage === 'notifications' ? 'active' : '' ?>" href="<?= e(base_url('modules/notifications/index.php')) ?>">Notifications<?php
+                $nUnread = unread_notifications_count();
+                if ($nUnread > 0): ?> (<?= (int) $nUnread ?>)<?php endif;
+            ?></a>
+            <a class="<?= $currentPage === 'activity' ? 'active' : '' ?>" href="<?= e(base_url('modules/activity/index.php')) ?>">Activity</a>
         </nav>
         <div class="sidebar-foot">
             Logged in as<br><strong><?= e($user['name']) ?></strong>

@@ -149,6 +149,275 @@ function interaction_types(): array
     return ['Phone Call', 'Email', 'Meeting', 'WhatsApp', 'Other'];
 }
 
+function onboarding_doc_types(): array
+{
+    return [
+        'GST Certificate',
+        'PAN Card',
+        'Company KYC',
+        'Customer Agreement',
+        'Purchase Order / Work Order',
+        'Commercial Approval',
+    ];
+}
+
+function vehicle_requirements(): array
+{
+    return ['8ft', '10ft', '14ft', '20ft', 'Other'];
+}
+
+function storage_requirements(): array
+{
+    return ['Ambient', 'Chiller', 'Frozen'];
+}
+
+function onboarding_statuses(): array
+{
+    return ['Draft', 'Submitted', 'In Approval', 'Approved', 'Rejected', 'Cancelled'];
+}
+
+function doc_statuses(): array
+{
+    return ['Pending', 'Received', 'Rejected', 'Not Applicable'];
+}
+
+function approval_departments(): array
+{
+    // Locked decision: direct Admin approval only (details already filled before submit).
+    return ['Admin'];
+}
+
+function customer_statuses(): array
+{
+    return ['Active', 'Inactive', 'On Hold'];
+}
+
+/**
+ * Possible duplicates by GSTIN and/or customer name (show matches; never auto-merge).
+ */
+function find_customer_duplicates(string $customerName, ?string $gstin, ?int $excludeId = null): array
+{
+    $customerName = trim($customerName);
+    $gstin = $gstin !== null ? strtoupper(trim($gstin)) : '';
+    if ($customerName === '' && $gstin === '') {
+        return [];
+    }
+
+    $sql = 'SELECT id, customer_code, customer_name, gstin, mobile, status, source
+            FROM customers WHERE (';
+    $params = [];
+    $parts = [];
+
+    if ($customerName !== '') {
+        $parts[] = 'customer_name = ?';
+        $params[] = $customerName;
+    }
+    if ($gstin !== '') {
+        $parts[] = 'gstin = ?';
+        $params[] = $gstin;
+    }
+    $sql .= implode(' OR ', $parts) . ')';
+
+    if ($excludeId) {
+        $sql .= ' AND id <> ?';
+        $params[] = $excludeId;
+    }
+    $sql .= ' ORDER BY id DESC LIMIT 20';
+
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Decide Admin approval. On Approve → generate customer code + Customer Master.
+ */
+function decide_onboarding_approval(int $approvalId, string $decision, string $remarks): array
+{
+    if (!in_array($decision, ['Approved', 'Rejected'], true)) {
+        throw new InvalidArgumentException('Decision must be Approved or Rejected.');
+    }
+    if ($remarks === '') {
+        throw new InvalidArgumentException('Remarks are required.');
+    }
+
+    $pdo = db();
+    $user = current_user();
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT a.*, o.id AS onb_id, o.onboarding_id, o.overall_status, o.prospect_pk, o.prospect_id
+             FROM onboarding_approvals a
+             JOIN onboarding o ON o.id = a.onboarding_pk
+             WHERE a.id = ? FOR UPDATE'
+        );
+        $stmt->execute([$approvalId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            throw new RuntimeException('Approval row not found.');
+        }
+
+        if ($row['department'] !== 'Admin') {
+            throw new RuntimeException('Only Admin approval is used. Finance / Ops / Commercial steps are disabled.');
+        }
+
+        if (!in_array($row['overall_status'], ['Submitted', 'In Approval'], true)) {
+            throw new RuntimeException('Onboarding must be Submitted or In Approval. Current: ' . $row['overall_status']);
+        }
+
+        if ($row['status'] !== 'Pending') {
+            throw new RuntimeException('This approval is already ' . $row['status'] . '.');
+        }
+
+        $upd = $pdo->prepare(
+            "UPDATE onboarding_approvals SET
+                status = ?, remarks = ?, approver_id = ?, approver_name = ?, decided_at = NOW()
+             WHERE id = ?"
+        );
+        $upd->execute([$decision, $remarks, $user['id'], $user['name'], $approvalId]);
+
+        $onboardingPk = (int) $row['onboarding_pk'];
+        $result = [
+            'onboarding_pk' => $onboardingPk,
+            'onboarding_id' => $row['onboarding_id'],
+            'customer_code' => null,
+            'message' => '',
+        ];
+
+        if ($decision === 'Rejected') {
+            $pdo->prepare("UPDATE onboarding SET overall_status = 'Rejected', updated_by = ? WHERE id = ?")
+                ->execute([$user['id'], $onboardingPk]);
+            write_audit('onboarding', $row['onboarding_id'], 'REJECTED', 'Admin', $remarks);
+            $pdo->commit();
+            create_notification(
+                'Onboarding Rejected',
+                'Onboarding Rejected',
+                $row['onboarding_id'] . ' was rejected by Admin.',
+                base_url('modules/onboarding/view.php?id=' . $onboardingPk),
+                'onboarding',
+                $row['onboarding_id']
+            );
+            $result['message'] = 'Admin rejected. Correct details/documents and resubmit.';
+            return $result;
+        }
+
+        // Admin approved → customer code + Customer Master
+        $seq = $pdo->prepare('SELECT prefix, next_number, pad_length FROM id_sequences WHERE seq_name = ? FOR UPDATE');
+        $seq->execute(['customer']);
+        $s = $seq->fetch();
+        if (!$s) {
+            throw new RuntimeException('Customer sequence missing.');
+        }
+        $customerCode = $s['prefix'] . str_pad((string) (int) $s['next_number'], (int) $s['pad_length'], '0', STR_PAD_LEFT);
+        $pdo->prepare('UPDATE id_sequences SET next_number = next_number + 1 WHERE seq_name = ?')
+            ->execute(['customer']);
+
+        $onbStmt = $pdo->prepare('SELECT * FROM onboarding WHERE id = ?');
+        $onbStmt->execute([$onboardingPk]);
+        $o = $onbStmt->fetch();
+
+        $dup = $pdo->prepare('SELECT customer_code FROM customers WHERE onboarding_pk = ?');
+        $dup->execute([$onboardingPk]);
+        if ($dup->fetch()) {
+            throw new RuntimeException('Customer already created for this onboarding.');
+        }
+
+        $ins = $pdo->prepare(
+            "INSERT INTO customers (
+                customer_code, source, onboarding_pk, prospect_pk,
+                customer_name, brand_name, business_type, contact_person, mobile, email, gstin,
+                registered_address, billing_address, operating_location, services, temperature_requirement,
+                commercial_details, payment_terms, credit_limit, agreement_start_date,
+                account_owner_id, account_owner_name, status, created_by
+             ) VALUES (
+                ?, 'New Onboarding', ?, ?,
+                ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, 'Active', ?
+             )"
+        );
+        $ins->execute([
+            $customerCode,
+            $onboardingPk,
+            $o['prospect_pk'],
+            $o['customer_name'],
+            $o['brand_name'],
+            $o['business_type'],
+            $o['contact_person'],
+            $o['mobile'],
+            $o['email'],
+            $o['gstin'],
+            $o['registered_address'],
+            $o['billing_address'],
+            $o['operating_address'],
+            $o['service_required'],
+            $o['temperature_requirement'],
+            $o['commercial_reference'],
+            $o['payment_terms'],
+            $o['credit_limit'],
+            $o['business_start_date'],
+            $user['id'],
+            $user['name'],
+            $user['id'],
+        ]);
+
+        $pdo->prepare("UPDATE onboarding SET overall_status = 'Approved', updated_by = ? WHERE id = ?")
+            ->execute([$user['id'], $onboardingPk]);
+
+        write_audit('onboarding', $row['onboarding_id'], 'APPROVED', 'Admin', $remarks);
+        write_audit('customers', $customerCode, 'CREATE', $row['onboarding_id'], 'From Admin approval');
+
+        $pdo->commit();
+
+        change_prospect_stage(
+            (int) $o['prospect_pk'],
+            'Customer Activated',
+            'Customer code generated: ' . $customerCode
+        );
+
+        create_notification(
+            'Customer Code Generated',
+            'Customer Code Generated',
+            $customerCode . ' created from ' . $row['onboarding_id'],
+            base_url('modules/customers/index.php?q=' . urlencode($customerCode)),
+            'customers',
+            $customerCode
+        );
+        create_notification(
+            'Customer Activated',
+            'Customer Activated',
+            $o['customer_name'] . ' is now Active (' . $customerCode . ').',
+            base_url('modules/customers/index.php?q=' . urlencode($customerCode)),
+            'customers',
+            $customerCode
+        );
+
+        $result['customer_code'] = $customerCode;
+        $result['message'] = 'Admin approved. Customer code: ' . $customerCode;
+        return $result;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
+/**
+ * Reset approvals to Pending when resubmitting a rejected onboarding.
+ */
+function reset_onboarding_approvals(int $onboardingPk): void
+{
+    $pdo = db();
+    $pdo->prepare(
+        "UPDATE onboarding_approvals SET
+            status = 'Pending', remarks = NULL, approver_id = NULL, approver_name = NULL, decided_at = NULL
+         WHERE onboarding_pk = ?"
+    )->execute([$onboardingPk]);
+}
+
 /**
  * Change prospect pipeline stage + write history + audit.
  */
@@ -201,10 +470,150 @@ function change_prospect_stage(int $prospectPk, string $toStage, string $remarks
         }
 
         $pdo->commit();
+
+        if ($fromStage !== $toStage && $toStage === 'Commercial Approved') {
+            create_notification(
+                'Commercial Approved',
+                'Commercial Approved',
+                $p['prospect_id'] . ' – ' . $p['company_name'] . ' ready for onboarding.',
+                base_url('modules/prospects/view.php?id=' . $prospectPk),
+                'prospects',
+                $p['prospect_id']
+            );
+        }
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $e;
     }
+}
+
+/**
+ * In-app notification (user_id NULL = visible to all until auth roles).
+ */
+function create_notification(
+    string $eventType,
+    string $title,
+    string $message,
+    ?string $linkUrl = null,
+    ?string $relatedModule = null,
+    ?string $relatedId = null,
+    ?int $userId = null
+): void {
+    try {
+        $stmt = db()->prepare(
+            'INSERT INTO notifications
+             (user_id, event_type, title, message, link_url, related_module, related_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            $userId,
+            $eventType,
+            $title,
+            $message,
+            $linkUrl,
+            $relatedModule,
+            $relatedId,
+        ]);
+    } catch (Throwable $e) {
+        // Do not break main flow if notifications table missing
+    }
+}
+
+function unread_notifications_count(?int $userId = null): int
+{
+    try {
+        if ($userId) {
+            $stmt = db()->prepare('SELECT COUNT(*) FROM notifications WHERE is_read = 0 AND (user_id IS NULL OR user_id = ?)');
+            $stmt->execute([$userId]);
+            return (int) $stmt->fetchColumn();
+        }
+        return (int) db()->query('SELECT COUNT(*) FROM notifications WHERE is_read = 0')->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Stream CSV download (Excel-friendly).
+ */
+function export_csv(string $filename, array $headers, array $rows): void
+{
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    $out = fopen('php://output', 'w');
+    // UTF-8 BOM for Excel
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, $headers);
+    foreach ($rows as $row) {
+        fputcsv($out, $row);
+    }
+    fclose($out);
+    exit;
+}
+
+/**
+ * Global search across prospects / onboarding / customers.
+ */
+function global_search(string $q, int $limit = 40): array
+{
+    $q = trim($q);
+    if ($q === '') {
+        return ['prospects' => [], 'onboarding' => [], 'customers' => []];
+    }
+    $like = '%' . $q . '%';
+    $pdo = db();
+
+    $p = $pdo->prepare(
+        "SELECT id, prospect_id, company_name, contact_person, mobile, pipeline_stage, status
+         FROM prospects
+         WHERE prospect_id LIKE ? OR company_name LIKE ? OR contact_person LIKE ?
+            OR mobile LIKE ? OR email LIKE ?
+         ORDER BY id DESC LIMIT ?"
+    );
+    $p->bindValue(1, $like);
+    $p->bindValue(2, $like);
+    $p->bindValue(3, $like);
+    $p->bindValue(4, $like);
+    $p->bindValue(5, $like);
+    $p->bindValue(6, $limit, PDO::PARAM_INT);
+    $p->execute();
+
+    $o = $pdo->prepare(
+        "SELECT id, onboarding_id, prospect_id, customer_name, mobile, gstin, overall_status
+         FROM onboarding
+         WHERE onboarding_id LIKE ? OR prospect_id LIKE ? OR customer_name LIKE ?
+            OR mobile LIKE ? OR gstin LIKE ?
+         ORDER BY id DESC LIMIT ?"
+    );
+    $o->bindValue(1, $like);
+    $o->bindValue(2, $like);
+    $o->bindValue(3, $like);
+    $o->bindValue(4, $like);
+    $o->bindValue(5, $like);
+    $o->bindValue(6, $limit, PDO::PARAM_INT);
+    $o->execute();
+
+    $c = $pdo->prepare(
+        "SELECT id, customer_code, customer_name, contact_person, mobile, gstin, status, source
+         FROM customers
+         WHERE customer_code LIKE ? OR customer_name LIKE ? OR contact_person LIKE ?
+            OR mobile LIKE ? OR email LIKE ? OR gstin LIKE ?
+         ORDER BY id DESC LIMIT ?"
+    );
+    $c->bindValue(1, $like);
+    $c->bindValue(2, $like);
+    $c->bindValue(3, $like);
+    $c->bindValue(4, $like);
+    $c->bindValue(5, $like);
+    $c->bindValue(6, $like);
+    $c->bindValue(7, $limit, PDO::PARAM_INT);
+    $c->execute();
+
+    return [
+        'prospects' => $p->fetchAll(),
+        'onboarding' => $o->fetchAll(),
+        'customers' => $c->fetchAll(),
+    ];
 }

@@ -109,6 +109,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Add Follow-up</h2>
+    <p class="step-note"><strong>Step 2b – Follow-up:</strong> Save a call, meeting, or WhatsApp note for this lead, plus the next follow-up date. Follow-ups are used before commercial confirmation too.</p>
 
     <?php if ($errors): ?>
         <div class="alert alert-error">

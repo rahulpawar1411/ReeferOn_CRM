@@ -67,6 +67,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Follow-up List</h2>
+    <p class="step-note"><strong>Follow-ups:</strong> Check Today, Upcoming, and Overdue items. Mark done with <em>Complete</em>. This is your sales chase list before onboarding.</p>
     <?php if (!$rows): ?>
         <div class="empty">No follow-ups in this tab.</div>
     <?php else: ?>

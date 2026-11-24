@@ -25,6 +25,15 @@ $fuStmt = db()->prepare(
 $fuStmt->execute([$id]);
 $followups = $fuStmt->fetchAll();
 
+$onb = null;
+try {
+    $onbStmt = db()->prepare('SELECT id, onboarding_id, overall_status FROM onboarding WHERE prospect_pk = ?');
+    $onbStmt->execute([$id]);
+    $onb = $onbStmt->fetch() ?: null;
+} catch (Throwable $e) {
+    $onb = null;
+}
+
 $pageTitle = 'Prospect ' . $p['prospect_id'];
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -33,17 +42,27 @@ require_once __DIR__ . '/../../includes/header.php';
     <a class="btn" href="<?= e(base_url('modules/prospects/edit.php?id=' . $p['id'])) ?>">Edit</a>
     <a class="btn" href="<?= e(base_url('modules/prospects/stage.php?id=' . $p['id'])) ?>">Change Stage</a>
     <a class="btn" href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add Follow-up</a>
+    <?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb): ?>
+        <a class="btn" href="<?= e(base_url('modules/onboarding/initiate.php?prospect_id=' . $p['id'])) ?>">Initiate Customer Onboarding</a>
+    <?php elseif ($onb): ?>
+        <a class="btn" href="<?= e(base_url('modules/onboarding/view.php?id=' . $onb['id'])) ?>">Open Onboarding (<?= e($onb['onboarding_id']) ?>)</a>
+    <?php endif; ?>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Back to List</a>
 </div>
 
-<?php if ($p['pipeline_stage'] === 'Commercial Approved'): ?>
+<?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb): ?>
     <div class="alert alert-success">
-        Commercial Approved — next phase will enable <strong>Initiate Customer Onboarding</strong> (not built yet).
+        Commercial Approved — click <strong>Initiate Customer Onboarding</strong> to copy this prospect into onboarding.
+    </div>
+<?php elseif ($onb): ?>
+    <div class="alert alert-success">
+        Onboarding linked: <strong><?= e($onb['onboarding_id']) ?></strong> (<?= e($onb['overall_status']) ?>).
     </div>
 <?php endif; ?>
 
 <div class="card">
     <h2>Prospect Details</h2>
+    <p class="step-note"><strong>Lead summary:</strong> After reviewing details → use <em>Change Stage</em> for the pipeline → <em>Add Follow-up</em> for calls/meetings. When stage is <strong>Commercial Approved</strong>, you can start Onboarding.</p>
     <dl class="dl-grid">
         <dt>Prospect ID</dt><dd><?= e($p['prospect_id']) ?></dd>
         <dt>Lead Creation Date</dt><dd><?= e($p['lead_creation_date']) ?></dd>

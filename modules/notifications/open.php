@@ -1,0 +1,17 @@
+<?php
+require_once __DIR__ . '/../../includes/functions.php';
+
+$id = (int) ($_GET['id'] ?? 0);
+$stmt = db()->prepare('SELECT * FROM notifications WHERE id = ?');
+$stmt->execute([$id]);
+$n = $stmt->fetch();
+
+if (!$n) {
+    flash('error', 'Notification not found.');
+    redirect(base_url('modules/notifications/index.php'));
+}
+
+db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ?')->execute([$id]);
+
+$link = $n['link_url'] ?: base_url('modules/notifications/index.php');
+redirect($link);

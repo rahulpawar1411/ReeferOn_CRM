@@ -124,7 +124,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>New Sales Prospect</h2>
-    <p>Prospect ID will be generated automatically (REO-LEAD-0001…).</p>
+    <p class="step-note"><strong>Step 1 – Create Lead:</strong> Add a new company/lead here. Prospect ID is generated automatically (REO-LEAD-xxxx). Update pipeline stage and follow-ups later from the prospect page.</p>
 
     <?php if ($errors): ?>
         <div class="alert alert-error">

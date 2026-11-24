@@ -47,6 +47,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Update Sales Pipeline Stage</h2>
+    <p class="step-note"><strong>Step 2 – Sales Pipeline:</strong> Update where this lead stands (Calling → Meeting → … → Commercial Approved). Every change is saved in history. When the customer accepts the rates, select <strong>Commercial Approved</strong>.</p>
     <p>
         <strong><?= e($p['company_name']) ?></strong>
         (<?= e($p['prospect_id']) ?>) —
@@ -89,7 +90,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <?php if ($p['pipeline_stage'] === 'Commercial Approved'): ?>
         <p class="muted" style="margin-top:12px;">
-            Commercial Approved — Onboarding module will be enabled in the next build phase.
+            Tip: After Commercial Approved, use <strong>Initiate Customer Onboarding</strong> on the prospect view (do not move to Onboarding manually).
         </p>
     <?php endif; ?>
 </div>
