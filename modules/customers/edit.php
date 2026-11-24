@@ -91,7 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id,
             ]);
 
-            write_audit('customers', $c['customer_code'], 'UPDATE', $c['status'], $status);
+            write_audit(
+                'customers',
+                $c['customer_code'],
+                'UPDATE',
+                'status=' . $c['status'] . '; name=' . $c['customer_name'],
+                'status=' . $status . '; name=' . $customer_name
+            );
             flash('success', 'Customer updated.');
             redirect(base_url('modules/customers/view.php?id=' . $id));
         } catch (Throwable $e) {

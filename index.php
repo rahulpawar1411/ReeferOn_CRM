@@ -214,7 +214,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="card">
     <h2>Recent Activity</h2>
-    <p><a href="<?= e(base_url('modules/activity/index.php')) ?>">View full audit trail</a></p>
+    <p><a href="<?= e(base_url('modules/logs/index.php')) ?>">View full Logs</a></p>
     <?php if (!$recentActivity): ?>
         <div class="empty">No activity yet.</div>
     <?php else: ?>

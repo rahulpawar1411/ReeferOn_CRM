@@ -668,3 +668,129 @@ function global_search(string $q, int $limit = 40): array
         'customers' => $c->fetchAll(),
     ];
 }
+
+/** Default list page size (hub tables). Logs use 35. */
+function page_size_default(): int
+{
+    return 25;
+}
+
+function page_size_logs(): int
+{
+    return 35;
+}
+
+/**
+ * Build pagination meta from total rows.
+ *
+ * @return array{page:int,per_page:int,total:int,pages:int,offset:int,from:int,to:int}
+ */
+function make_pagination(int $total, int $perPage = 25, ?int $page = null): array
+{
+    $perPage = max(1, $perPage);
+    $pages = max(1, (int) ceil($total / $perPage));
+    if ($page === null) {
+        $page = (int) ($_GET['page'] ?? 1);
+    }
+    $page = max(1, min($pages, $page));
+    $offset = ($page - 1) * $perPage;
+    $from = $total === 0 ? 0 : $offset + 1;
+    $to = min($total, $offset + $perPage);
+
+    return [
+        'page' => $page,
+        'per_page' => $perPage,
+        'total' => $total,
+        'pages' => $pages,
+        'offset' => $offset,
+        'from' => $from,
+        'to' => $to,
+    ];
+}
+
+/**
+ * Run COUNT then SELECT with LIMIT/OFFSET.
+ *
+ * @return array{0: array<int,array>, 1: array}
+ */
+function paginate_sql(string $countSql, string $dataSql, array $params, int $perPage = 25): array
+{
+    $countStmt = db()->prepare($countSql);
+    $countStmt->execute($params);
+    $total = (int) $countStmt->fetchColumn();
+    $pg = make_pagination($total, $perPage);
+
+    $dataSql .= ' LIMIT ' . (int) $pg['per_page'] . ' OFFSET ' . (int) $pg['offset'];
+    $stmt = db()->prepare($dataSql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+
+    return [$rows, $pg];
+}
+
+/**
+ * Render Prev / page numbers / Next. Keeps current query string except page.
+ */
+function render_pagination(array $pg, array $keepQuery = []): void
+{
+    if (($pg['pages'] ?? 1) <= 1 && ($pg['total'] ?? 0) === 0) {
+        return;
+    }
+
+    $keepQuery = $keepQuery ?: $_GET;
+    unset($keepQuery['page']);
+
+    $url = static function (int $page) use ($keepQuery): string {
+        $q = $keepQuery;
+        $q['page'] = $page;
+        return '?' . http_build_query($q);
+    };
+
+    $page = (int) $pg['page'];
+    $pages = (int) $pg['pages'];
+    $from = (int) $pg['from'];
+    $to = (int) $pg['to'];
+    $total = (int) $pg['total'];
+    $per = (int) $pg['per_page'];
+    ?>
+    <div class="pagination">
+        <div class="pagination-info">
+            Showing <?= $from ?>–<?= $to ?> of <?= $total ?>
+            (<?= $per ?> per page)
+        </div>
+        <?php if ($pages > 1): ?>
+        <div class="pagination-links">
+            <?php if ($page > 1): ?>
+                <a class="btn btn-secondary" href="<?= e($url($page - 1)) ?>">Prev</a>
+            <?php endif; ?>
+            <?php
+            $start = max(1, $page - 2);
+            $end = min($pages, $page + 2);
+            if ($start > 1) {
+                echo '<a href="' . e($url(1)) . '">1</a>';
+                if ($start > 2) {
+                    echo '<span>…</span>';
+                }
+            }
+            for ($i = $start; $i <= $end; $i++) {
+                if ($i === $page) {
+                    echo '<span class="pagination-current">' . $i . '</span>';
+                } else {
+                    echo '<a href="' . e($url($i)) . '">' . $i . '</a>';
+                }
+            }
+            if ($end < $pages) {
+                if ($end < $pages - 1) {
+                    echo '<span>…</span>';
+                }
+                echo '<a href="' . e($url($pages)) . '">' . $pages . '</a>';
+            }
+            ?>
+            <?php if ($page < $pages): ?>
+                <a class="btn btn-secondary" href="<?= e($url($page + 1)) ?>">Next</a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php
+}

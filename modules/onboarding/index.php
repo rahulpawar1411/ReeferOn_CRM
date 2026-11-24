@@ -6,23 +6,25 @@ require_once __DIR__ . '/../../includes/functions.php';
 $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
 
-$sql = 'SELECT * FROM onboarding WHERE 1=1';
+$where = ' WHERE 1=1';
 $params = [];
 
 if ($q !== '') {
-    $sql .= ' AND (onboarding_id LIKE ? OR prospect_id LIKE ? OR customer_name LIKE ? OR mobile LIKE ? OR gstin LIKE ?)';
+    $where .= ' AND (onboarding_id LIKE ? OR prospect_id LIKE ? OR customer_name LIKE ? OR mobile LIKE ? OR gstin LIKE ?)';
     $like = '%' . $q . '%';
     $params = array_merge($params, [$like, $like, $like, $like, $like]);
 }
 if ($status !== '' && in_array($status, onboarding_statuses(), true)) {
-    $sql .= ' AND overall_status = ?';
+    $where .= ' AND overall_status = ?';
     $params[] = $status;
 }
-$sql .= ' ORDER BY id DESC';
 
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-$rows = $stmt->fetchAll();
+[$rows, $pg] = paginate_sql(
+    'SELECT COUNT(*) FROM onboarding' . $where,
+    'SELECT * FROM onboarding' . $where . ' ORDER BY id DESC',
+    $params,
+    page_size_default()
+);
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -87,6 +89,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg); ?>
     <?php endif; ?>
 </div>
 

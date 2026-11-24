@@ -8,22 +8,23 @@ if (!in_array($tab, ['pending', 'done', 'all'], true)) {
     $tab = 'pending';
 }
 
-$sql = "SELECT a.*, o.onboarding_id, o.customer_name, o.prospect_id, o.overall_status, o.gstin
-        FROM onboarding_approvals a
+$from = " FROM onboarding_approvals a
         JOIN onboarding o ON o.id = a.onboarding_pk
         WHERE a.department = 'Admin'";
 $params = [];
 
 if ($tab === 'pending') {
-    $sql .= " AND a.status = 'Pending' AND o.overall_status IN ('Submitted','In Approval')";
+    $from .= " AND a.status = 'Pending' AND o.overall_status IN ('Submitted','In Approval')";
 } elseif ($tab === 'done') {
-    $sql .= " AND a.status IN ('Approved','Rejected')";
+    $from .= " AND a.status IN ('Approved','Rejected')";
 }
-$sql .= ' ORDER BY a.id DESC';
 
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-$rows = $stmt->fetchAll();
+[$rows, $pg] = paginate_sql(
+    'SELECT COUNT(*)' . $from,
+    'SELECT a.*, o.onboarding_id, o.customer_name, o.prospect_id, o.overall_status, o.gstin' . $from . ' ORDER BY a.id DESC',
+    $params,
+    page_size_default()
+);
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -77,6 +78,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg, ['tab' => $tab]); ?>
     <?php endif; ?>
 </div>
 

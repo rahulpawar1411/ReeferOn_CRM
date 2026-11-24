@@ -53,14 +53,16 @@ try {
         ];
     }
 
-    $sql = 'SELECT * FROM notifications';
-    if ($tab === 'unread') {
-        $sql .= ' WHERE is_read = 0';
-    }
-    $sql .= ' ORDER BY id DESC LIMIT 100';
-    $rows = $pdo->query($sql)->fetchAll();
+    $where = ($tab === 'unread') ? ' WHERE is_read = 0' : '';
+    [$rows, $pg] = paginate_sql(
+        'SELECT COUNT(*) FROM notifications' . $where,
+        'SELECT * FROM notifications' . $where . ' ORDER BY id DESC',
+        [],
+        page_size_default()
+    );
 } catch (Throwable $e) {
     $rows = [];
+    $pg = make_pagination(0, page_size_default());
     flash('error', 'Notifications table missing? Import sql/schema_phase6.sql');
 }
 
@@ -132,6 +134,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg ?? make_pagination(0), ['tab' => $tab]); ?>
     <?php endif; ?>
 </div>
 

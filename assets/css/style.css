@@ -269,6 +269,48 @@ table.data tr:nth-child(even) { background: #fafbfc; }
   color: #fff;
 }
 
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+.pagination-info {
+  font-size: 12px;
+  color: #555;
+}
+.pagination-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.pagination-links a {
+  display: inline-block;
+  min-width: 32px;
+  text-align: center;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #1a3a6b;
+  font-size: 13px;
+}
+.pagination-links a:hover { background: #eef2f8; text-decoration: none; }
+.pagination-current {
+  display: inline-block;
+  min-width: 32px;
+  text-align: center;
+  padding: 6px 10px;
+  border: 1px solid #1a3a6b;
+  background: #1a3a6b;
+  color: #fff;
+  font-size: 13px;
+}
+
 .help-steps {
   line-height: 1.7;
   padding-left: 20px;

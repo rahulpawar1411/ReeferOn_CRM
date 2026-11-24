@@ -13,29 +13,37 @@ $today = date('Y-m-d');
 
 switch ($tab) {
     case 'today':
-        $sql = "SELECT * FROM followups WHERE status = 'Open' AND followup_date = ? ORDER BY id DESC";
+        $where = " WHERE status = 'Open' AND followup_date = ?";
+        $order = ' ORDER BY id DESC';
         $params = [$today];
         break;
     case 'upcoming':
-        $sql = "SELECT * FROM followups WHERE status = 'Open' AND followup_date > ? ORDER BY followup_date ASC, id DESC";
+        $where = " WHERE status = 'Open' AND followup_date > ?";
+        $order = ' ORDER BY followup_date ASC, id DESC';
         $params = [$today];
         break;
     case 'overdue':
-        $sql = "SELECT * FROM followups WHERE status = 'Open' AND followup_date < ? ORDER BY followup_date ASC, id DESC";
+        $where = " WHERE status = 'Open' AND followup_date < ?";
+        $order = ' ORDER BY followup_date ASC, id DESC';
         $params = [$today];
         break;
     case 'completed':
-        $sql = "SELECT * FROM followups WHERE status = 'Completed' ORDER BY updated_at DESC, id DESC";
+        $where = " WHERE status = 'Completed'";
+        $order = ' ORDER BY updated_at DESC, id DESC';
         $params = [];
         break;
     default:
-        $sql = 'SELECT * FROM followups ORDER BY followup_date DESC, id DESC';
+        $where = '';
+        $order = ' ORDER BY followup_date DESC, id DESC';
         $params = [];
 }
 
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-$rows = $stmt->fetchAll();
+[$rows, $pg] = paginate_sql(
+    'SELECT COUNT(*) FROM followups' . $where,
+    'SELECT * FROM followups' . $where . $order,
+    $params,
+    page_size_default()
+);
 
 // Counts for tabs
 $countStmt = db()->prepare("SELECT
@@ -111,6 +119,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg, ['tab' => $tab]); ?>
     <?php endif; ?>
 </div>
 

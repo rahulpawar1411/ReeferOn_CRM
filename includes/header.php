@@ -38,7 +38,7 @@ $user = current_user();
                 $nUnread = unread_notifications_count();
                 if ($nUnread > 0): ?> (<?= (int) $nUnread ?>)<?php endif;
             ?></a>
-            <a class="<?= $currentPage === 'activity' ? 'active' : '' ?>" href="<?= e(base_url('modules/activity/index.php')) ?>">Activity</a>
+            <a class="<?= $currentPage === 'logs' ? 'active' : '' ?>" href="<?= e(base_url('modules/logs/index.php')) ?>">Logs</a>
             <a class="<?= $currentPage === 'help' ? 'active' : '' ?>" href="<?= e(base_url('modules/help/index.php')) ?>">Help</a>
         </nav>
         <div class="sidebar-foot">

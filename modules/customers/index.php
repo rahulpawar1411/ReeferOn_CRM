@@ -7,26 +7,28 @@ $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
 $source = $_GET['source'] ?? '';
 
-$sql = 'SELECT * FROM customers WHERE 1=1';
+$where = ' WHERE 1=1';
 $params = [];
 if ($q !== '') {
-    $sql .= ' AND (customer_code LIKE ? OR customer_name LIKE ? OR mobile LIKE ? OR gstin LIKE ? OR contact_person LIKE ?)';
+    $where .= ' AND (customer_code LIKE ? OR customer_name LIKE ? OR mobile LIKE ? OR gstin LIKE ? OR contact_person LIKE ?)';
     $like = '%' . $q . '%';
     $params = array_merge($params, [$like, $like, $like, $like, $like]);
 }
 if (in_array($status, customer_statuses(), true)) {
-    $sql .= ' AND status = ?';
+    $where .= ' AND status = ?';
     $params[] = $status;
 }
 if (in_array($source, ['New Onboarding', 'Existing Customer'], true)) {
-    $sql .= ' AND source = ?';
+    $where .= ' AND source = ?';
     $params[] = $source;
 }
-$sql .= ' ORDER BY id DESC';
 
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-$rows = $stmt->fetchAll();
+[$rows, $pg] = paginate_sql(
+    'SELECT COUNT(*) FROM customers' . $where,
+    'SELECT * FROM customers' . $where . ' ORDER BY id DESC',
+    $params,
+    page_size_default()
+);
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -100,6 +102,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg); ?>
     <?php endif; ?>
 </div>
 

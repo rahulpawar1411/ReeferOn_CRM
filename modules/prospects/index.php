@@ -10,49 +10,50 @@ $city = trim($_GET['city'] ?? '');
 $date_from = trim($_GET['date_from'] ?? '');
 $date_to = trim($_GET['date_to'] ?? '');
 
-$sql = "SELECT * FROM prospects WHERE 1=1";
+$where = ' WHERE 1=1';
 $params = [];
 
 if ($q !== '') {
-    $sql .= " AND (
+    $where .= ' AND (
         prospect_id LIKE ? OR company_name LIKE ? OR contact_person LIKE ?
         OR mobile LIKE ? OR email LIKE ?
-    )";
+    )';
     $like = '%' . $q . '%';
     array_push($params, $like, $like, $like, $like, $like);
 }
 if ($stage !== '') {
-    $sql .= " AND pipeline_stage = ?";
+    $where .= ' AND pipeline_stage = ?';
     $params[] = $stage;
 }
 if ($business_type !== '') {
-    $sql .= " AND business_type = ?";
+    $where .= ' AND business_type = ?';
     $params[] = $business_type;
 }
 if ($city !== '') {
-    $sql .= " AND city LIKE ?";
+    $where .= ' AND city LIKE ?';
     $params[] = '%' . $city . '%';
 }
 if ($date_from !== '') {
-    $sql .= " AND lead_creation_date >= ?";
+    $where .= ' AND lead_creation_date >= ?';
     $params[] = $date_from;
 }
 if ($date_to !== '') {
-    $sql .= " AND lead_creation_date <= ?";
+    $where .= ' AND lead_creation_date <= ?';
     $params[] = $date_to;
 }
 
-$sql .= " ORDER BY id DESC LIMIT 500";
-
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-$rows = $stmt->fetchAll();
+[$rows, $pg] = paginate_sql(
+    'SELECT COUNT(*) FROM prospects' . $where,
+    'SELECT * FROM prospects' . $where . ' ORDER BY id DESC',
+    $params,
+    page_size_default()
+);
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card">
-    <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups.</p>
+    <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups. <?= (int) page_size_default() ?> rows per page.</p>
     <div class="toolbar">
         <a class="btn" href="<?= e(base_url('modules/prospects/create.php')) ?>">+ New Prospect</a>
     </div>
@@ -136,6 +137,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endforeach; ?>
             </tbody>
         </table>
+        <?php render_pagination($pg); ?>
     <?php endif; ?>
 </div>
 

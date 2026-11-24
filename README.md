@@ -32,7 +32,9 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 7. Customers: [http://localhost/CRM/modules/customers/index.php](http://localhost/CRM/modules/customers/index.php)
 8. Reports: [http://localhost/CRM/modules/reports/index.php](http://localhost/CRM/modules/reports/index.php)
 9. Notifications: [http://localhost/CRM/modules/notifications/index.php](http://localhost/CRM/modules/notifications/index.php)
-10. Help guide: [http://localhost/CRM/modules/help/index.php](http://localhost/CRM/modules/help/index.php)
+10. Logs (activity): [http://localhost/CRM/modules/logs/index.php](http://localhost/CRM/modules/logs/index.php)
+11. Help guide: [http://localhost/CRM/modules/help/index.php](http://localhost/CRM/modules/help/index.php)
+12. Health JSON: [http://localhost/CRM/health.php](http://localhost/CRM/health.php)
 
 If you already installed earlier (multi-dept approvals), import `sql/migrate_admin_only_approval.sql` once in phpMyAdmin.  
 If Notifications page errors, import `sql/schema_phase6.sql` once.
