@@ -30,6 +30,31 @@ if (in_array($source, ['New Onboarding', 'Existing Customer'], true)) {
     page_size_default()
 );
 
+$renderCustomerRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
+                <tr>
+                    <td><?= e($r['customer_code']) ?></td>
+                    <td><?= e($r['customer_name']) ?></td>
+                    <td><?= e($r['contact_person']) ?></td>
+                    <td><?= e($r['mobile']) ?></td>
+                    <td><?= e($r['gstin'] ?? '-') ?></td>
+                    <td><?= e($r['source']) ?></td>
+                    <td><span class="badge"><?= e($r['status']) ?></span></td>
+                    <td>
+                        <a href="<?= e(base_url('modules/customers/view.php?id=' . $r['id'])) ?>">View</a>
+                        |
+                        <a href="<?= e(base_url('modules/customers/edit.php?id=' . $r['id'])) ?>">Edit</a>
+                    </td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderCustomerRows($rows)));
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -70,7 +95,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No customers yet. Approve an onboarding or <a href="<?= e(base_url('modules/customers/create.php')) ?>">add an existing customer</a>.</div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>Customer Code</th>
@@ -84,22 +109,7 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td><?= e($r['customer_code']) ?></td>
-                    <td><?= e($r['customer_name']) ?></td>
-                    <td><?= e($r['contact_person']) ?></td>
-                    <td><?= e($r['mobile']) ?></td>
-                    <td><?= e($r['gstin'] ?? '-') ?></td>
-                    <td><?= e($r['source']) ?></td>
-                    <td><span class="badge"><?= e($r['status']) ?></span></td>
-                    <td>
-                        <a href="<?= e(base_url('modules/customers/view.php?id=' . $r['id'])) ?>">View</a>
-                        |
-                        <a href="<?= e(base_url('modules/customers/edit.php?id=' . $r['id'])) ?>">Edit</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderCustomerRows($rows) ?>
             </tbody>
         </table>
         <?php render_pagination($pg); ?>

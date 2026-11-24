@@ -26,36 +26,10 @@ if ($tab === 'pending') {
     page_size_default()
 );
 
-require_once __DIR__ . '/../../includes/header.php';
-?>
-
-<div class="card">
-    <h2>Admin Approvals</h2>
-    <p class="step-note"><strong>Step 4 – Admin approval:</strong> After all onboarding details + documents are filled and submitted, Admin Approve / Reject here. Approve creates customer code <strong>REO-CUS-xxxx</strong> and moves the record to Customer Master.</p>
-
-    <div class="tabs">
-        <a class="<?= $tab === 'pending' ? 'active' : '' ?>" href="?tab=pending">Pending</a>
-        <a class="<?= $tab === 'done' ? 'active' : '' ?>" href="?tab=done">Done</a>
-        <a class="<?= $tab === 'all' ? 'active' : '' ?>" href="?tab=all">All</a>
-    </div>
-
-    <?php if (!$rows): ?>
-        <div class="empty">No <?= e(strtolower($tab)) ?> Admin approvals.</div>
-    <?php else: ?>
-        <table class="data">
-            <thead>
-            <tr>
-                <th>Onboarding</th>
-                <th>Prospect</th>
-                <th>Customer</th>
-                <th>GSTIN</th>
-                <th>Onboarding Status</th>
-                <th>Approval</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($rows as $r): ?>
+$keepQuery = ['tab' => $tab];
+$renderApprovalRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
                 <tr>
                     <td>
                         <a href="<?= e(base_url('modules/onboarding/view.php?id=' . $r['onboarding_pk'])) ?>">
@@ -75,10 +49,47 @@ require_once __DIR__ . '/../../includes/header.php';
                         <?php endif; ?>
                     </td>
                 </tr>
-            <?php endforeach; ?>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderApprovalRows($rows), $keepQuery));
+}
+
+require_once __DIR__ . '/../../includes/header.php';
+?>
+
+<div class="card">
+    <h2>Admin Approvals</h2>
+    <p class="step-note"><strong>Step 4 – Admin approval:</strong> After all onboarding details + documents are filled and submitted, Admin Approve / Reject here. Approve creates customer code <strong>REO-CUS-xxxx</strong> and moves the record to Customer Master.</p>
+
+    <div class="tabs">
+        <a class="<?= $tab === 'pending' ? 'active' : '' ?>" href="?tab=pending">Pending</a>
+        <a class="<?= $tab === 'done' ? 'active' : '' ?>" href="?tab=done">Done</a>
+        <a class="<?= $tab === 'all' ? 'active' : '' ?>" href="?tab=all">All</a>
+    </div>
+
+    <?php if (!$rows): ?>
+        <div class="empty">No <?= e(strtolower($tab)) ?> Admin approvals.</div>
+    <?php else: ?>
+        <table class="data" data-lazy="1">
+            <thead>
+            <tr>
+                <th>Onboarding</th>
+                <th>Prospect</th>
+                <th>Customer</th>
+                <th>GSTIN</th>
+                <th>Onboarding Status</th>
+                <th>Approval</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <?= $renderApprovalRows($rows) ?>
             </tbody>
         </table>
-        <?php render_pagination($pg, ['tab' => $tab]); ?>
+        <?php render_pagination($pg, $keepQuery); ?>
     <?php endif; ?>
 </div>
 

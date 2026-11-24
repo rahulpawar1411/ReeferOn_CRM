@@ -45,6 +45,39 @@ switch ($tab) {
     page_size_default()
 );
 
+$keepQuery = ['tab' => $tab];
+$renderFollowupRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
+                <tr>
+                    <td><?= e($r['followup_date']) ?></td>
+                    <td>
+                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $r['prospect_pk'])) ?>">
+                            <?= e($r['prospect_id']) ?>
+                        </a>
+                    </td>
+                    <td><?= e($r['company_name']) ?></td>
+                    <td><?= e($r['contact_person']) ?></td>
+                    <td><?= e($r['interaction_type']) ?></td>
+                    <td><?= e($r['next_followup_date'] ?? '-') ?></td>
+                    <td><span class="badge"><?= e($r['status']) ?></span></td>
+                    <td><?= e($r['created_by_name']) ?></td>
+                    <td>
+                        <?php if ($r['status'] === 'Open'): ?>
+                            <a href="<?= e(base_url('modules/followups/complete.php?id=' . $r['id'])) ?>">Complete</a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderFollowupRows($rows), $keepQuery));
+}
+
 // Counts for tabs
 $countStmt = db()->prepare("SELECT
     SUM(CASE WHEN status='Open' AND followup_date = CURDATE() THEN 1 ELSE 0 END) AS today_c,
@@ -79,7 +112,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No follow-ups in this tab.</div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>Date</th>
@@ -94,32 +127,10 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td><?= e($r['followup_date']) ?></td>
-                    <td>
-                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $r['prospect_pk'])) ?>">
-                            <?= e($r['prospect_id']) ?>
-                        </a>
-                    </td>
-                    <td><?= e($r['company_name']) ?></td>
-                    <td><?= e($r['contact_person']) ?></td>
-                    <td><?= e($r['interaction_type']) ?></td>
-                    <td><?= e($r['next_followup_date'] ?? '-') ?></td>
-                    <td><span class="badge"><?= e($r['status']) ?></span></td>
-                    <td><?= e($r['created_by_name']) ?></td>
-                    <td>
-                        <?php if ($r['status'] === 'Open'): ?>
-                            <a href="<?= e(base_url('modules/followups/complete.php?id=' . $r['id'])) ?>">Complete</a>
-                        <?php else: ?>
-                            -
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderFollowupRows($rows) ?>
             </tbody>
         </table>
-        <?php render_pagination($pg, ['tab' => $tab]); ?>
+        <?php render_pagination($pg, $keepQuery); ?>
     <?php endif; ?>
 </div>
 

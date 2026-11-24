@@ -49,6 +49,32 @@ if ($date_to !== '') {
     page_size_default()
 );
 
+$renderProspectRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $row): ?>
+                <tr>
+                    <td><?= e($row['prospect_id']) ?></td>
+                    <td><?= e($row['lead_creation_date']) ?></td>
+                    <td><?= e($row['company_name']) ?></td>
+                    <td><?= e($row['contact_person']) ?></td>
+                    <td><?= e($row['mobile']) ?></td>
+                    <td><?= e($row['city'] ?? '-') ?></td>
+                    <td><?= e($row['service_required']) ?></td>
+                    <td><span class="badge"><?= e($row['pipeline_stage']) ?></span></td>
+                    <td><?= e($row['next_followup_date'] ?? '-') ?></td>
+                    <td>
+                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $row['id'])) ?>">View</a> |
+                        <a href="<?= e(base_url('modules/prospects/edit.php?id=' . $row['id'])) ?>">Edit</a>
+                    </td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderProspectRows($rows)));
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -102,7 +128,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No prospects found. <a href="<?= e(base_url('modules/prospects/create.php')) ?>">Create first prospect</a></div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>Prospect ID</th>
@@ -118,23 +144,7 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $row): ?>
-                <tr>
-                    <td><?= e($row['prospect_id']) ?></td>
-                    <td><?= e($row['lead_creation_date']) ?></td>
-                    <td><?= e($row['company_name']) ?></td>
-                    <td><?= e($row['contact_person']) ?></td>
-                    <td><?= e($row['mobile']) ?></td>
-                    <td><?= e($row['city'] ?? '-') ?></td>
-                    <td><?= e($row['service_required']) ?></td>
-                    <td><span class="badge"><?= e($row['pipeline_stage']) ?></span></td>
-                    <td><?= e($row['next_followup_date'] ?? '-') ?></td>
-                    <td>
-                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $row['id'])) ?>">View</a> |
-                        <a href="<?= e(base_url('modules/prospects/edit.php?id=' . $row['id'])) ?>">Edit</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderProspectRows($rows) ?>
             </tbody>
         </table>
         <?php render_pagination($pg); ?>

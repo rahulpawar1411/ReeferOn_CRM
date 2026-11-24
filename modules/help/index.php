@@ -426,7 +426,7 @@ if (!in_array($step, $allowed, true)) {
         <li>Before Submit, all documents must be Received or Not Applicable</li>
         <li>Customer code only after <strong>Admin Approve</strong></li>
         <li>Do not retype the same data — modules are connected</li>
-        <li>List pages show <strong>25 rows</strong> per page; <strong>Logs</strong> shows <strong>35</strong> — use Prev/Next</li>
+        <li>List pages show <strong>25 rows</strong> first (Logs <strong>35</strong>), then <strong>lazy load</strong> more on scroll or <em>Load more</em> — same Loading… UI everywhere</li>
         <li>Login is not enabled yet — everyone uses <strong>System User</strong>; roles come later</li>
     </ul>
     <h3>Stuck? Check this order</h3>

@@ -26,6 +26,35 @@ if ($status !== '' && in_array($status, onboarding_statuses(), true)) {
     page_size_default()
 );
 
+$renderOnboardingRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
+                <tr>
+                    <td><?= e($r['onboarding_id']) ?></td>
+                    <td>
+                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $r['prospect_pk'])) ?>">
+                            <?= e($r['prospect_id']) ?>
+                        </a>
+                    </td>
+                    <td><?= e($r['customer_name']) ?></td>
+                    <td><?= e($r['contact_person']) ?></td>
+                    <td><?= e($r['mobile']) ?></td>
+                    <td><span class="badge"><?= e($r['overall_status']) ?></span></td>
+                    <td><?= e($r['created_at']) ?></td>
+                    <td>
+                        <a href="<?= e(base_url('modules/onboarding/view.php?id=' . $r['id'])) ?>">View</a>
+                        |
+                        <a href="<?= e(base_url('modules/onboarding/edit.php?id=' . $r['id'])) ?>">Edit</a>
+                    </td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderOnboardingRows($rows)));
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -53,7 +82,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No onboarding records yet.</div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>Onboarding ID</th>
@@ -67,26 +96,7 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td><?= e($r['onboarding_id']) ?></td>
-                    <td>
-                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $r['prospect_pk'])) ?>">
-                            <?= e($r['prospect_id']) ?>
-                        </a>
-                    </td>
-                    <td><?= e($r['customer_name']) ?></td>
-                    <td><?= e($r['contact_person']) ?></td>
-                    <td><?= e($r['mobile']) ?></td>
-                    <td><span class="badge"><?= e($r['overall_status']) ?></span></td>
-                    <td><?= e($r['created_at']) ?></td>
-                    <td>
-                        <a href="<?= e(base_url('modules/onboarding/view.php?id=' . $r['id'])) ?>">View</a>
-                        |
-                        <a href="<?= e(base_url('modules/onboarding/edit.php?id=' . $r['id'])) ?>">Edit</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderOnboardingRows($rows) ?>
             </tbody>
         </table>
         <?php render_pagination($pg); ?>

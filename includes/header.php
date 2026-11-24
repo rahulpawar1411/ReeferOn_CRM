@@ -16,8 +16,15 @@ $user = current_user();
     <title><?= e($pageTitle) ?> | ReeferON CRM</title>
     <link rel="icon" type="image/png" href="<?= e(base_url('assets/logo.png')) ?>">
     <link rel="stylesheet" href="<?= e(base_url('assets/css/style.css')) ?>">
+    <meta name="crm-base" content="<?= e(base_url()) ?>">
 </head>
 <body>
+<div id="app-loader" class="app-loader" hidden aria-live="polite" aria-busy="true">
+    <div class="app-loader-card">
+        <div class="app-spinner" aria-hidden="true"></div>
+        <div class="app-loader-text">Loading…</div>
+    </div>
+</div>
 <div class="app">
     <aside class="sidebar">
         <a class="brand" href="<?= e(base_url('index.php')) ?>">

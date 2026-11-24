@@ -63,7 +63,35 @@ try {
 } catch (Throwable $e) {
     $rows = [];
     $pg = make_pagination(0, page_size_default());
-    flash('error', 'Notifications table missing? Import sql/schema_phase6.sql');
+    if (!wants_ajax()) {
+        flash('error', 'Notifications table missing? Import sql/schema_phase6.sql');
+    }
+}
+
+$keepQuery = ['tab' => $tab];
+$renderNotificationRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
+                <tr>
+                    <td><?= e($r['created_at']) ?></td>
+                    <td><?= e($r['event_type']) ?></td>
+                    <td><?= e($r['title']) ?></td>
+                    <td><?= e($r['message']) ?></td>
+                    <td><?= ((int) $r['is_read'] === 1) ? 'Yes' : 'No' ?></td>
+                    <td>
+                        <?php if (!empty($r['link_url'])): ?>
+                            <a href="<?= e(base_url('modules/notifications/open.php?id=' . $r['id'])) ?>">Open</a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderNotificationRows($rows), $keepQuery));
 }
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -104,7 +132,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No <?= e($tab) ?> notifications yet. Events like Commercial Approved, submit, reject, and customer code create them.</div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>When</th>
@@ -116,25 +144,10 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td><?= e($r['created_at']) ?></td>
-                    <td><?= e($r['event_type']) ?></td>
-                    <td><?= e($r['title']) ?></td>
-                    <td><?= e($r['message']) ?></td>
-                    <td><?= ((int) $r['is_read'] === 1) ? 'Yes' : 'No' ?></td>
-                    <td>
-                        <?php if (!empty($r['link_url'])): ?>
-                            <a href="<?= e(base_url('modules/notifications/open.php?id=' . $r['id'])) ?>">Open</a>
-                        <?php else: ?>
-                            -
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderNotificationRows($rows) ?>
             </tbody>
         </table>
-        <?php render_pagination($pg ?? make_pagination(0), ['tab' => $tab]); ?>
+        <?php render_pagination($pg ?? make_pagination(0), $keepQuery); ?>
     <?php endif; ?>
 </div>
 

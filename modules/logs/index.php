@@ -62,6 +62,33 @@ if ($export) {
     page_size_logs()
 );
 
+$keepQuery = array_filter([
+    'module' => $module,
+    'action' => $action,
+    'from' => $from,
+    'to' => $to,
+    'q' => $q,
+], static fn($v) => $v !== '' && $v !== null);
+
+$renderLogRows = static function (array $rows): string {
+    ob_start();
+    foreach ($rows as $r): ?>
+                <tr>
+                    <td><?= e($r['created_at']) ?></td>
+                    <td><span class="badge"><?= e($r['module']) ?></span></td>
+                    <td><?= e($r['record_id']) ?></td>
+                    <td><?= e($r['action']) ?></td>
+                    <td><?= e(($r['old_value'] ?? '-') . ' → ' . ($r['new_value'] ?? '-')) ?></td>
+                    <td><?= e($r['performed_by_name']) ?></td>
+                </tr>
+    <?php endforeach;
+    return (string) ob_get_clean();
+};
+
+if (wants_ajax()) {
+    json_response(lazy_ajax_payload($pg, $renderLogRows($rows), $keepQuery));
+}
+
 $modules = db()->query('SELECT DISTINCT module FROM audit_logs ORDER BY module')->fetchAll(PDO::FETCH_COLUMN);
 $actions = db()->query('SELECT DISTINCT action FROM audit_logs ORDER BY action')->fetchAll(PDO::FETCH_COLUMN);
 
@@ -133,7 +160,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (!$rows): ?>
         <div class="empty">No log rows match. Use the CRM (create prospect, change stage, upload docs…) and refresh.</div>
     <?php else: ?>
-        <table class="data">
+        <table class="data" data-lazy="1">
             <thead>
             <tr>
                 <th>When</th>
@@ -145,27 +172,10 @@ require_once __DIR__ . '/../../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td><?= e($r['created_at']) ?></td>
-                    <td><span class="badge"><?= e($r['module']) ?></span></td>
-                    <td><?= e($r['record_id']) ?></td>
-                    <td><?= e($r['action']) ?></td>
-                    <td><?= e(($r['old_value'] ?? '-') . ' → ' . ($r['new_value'] ?? '-')) ?></td>
-                    <td><?= e($r['performed_by_name']) ?></td>
-                </tr>
-            <?php endforeach; ?>
+            <?= $renderLogRows($rows) ?>
             </tbody>
         </table>
-        <?php
-        render_pagination($pg, array_filter([
-            'module' => $module,
-            'action' => $action,
-            'from' => $from,
-            'to' => $to,
-            'q' => $q,
-        ], static fn($v) => $v !== '' && $v !== null));
-        ?>
+        <?php render_pagination($pg, $keepQuery); ?>
     <?php endif; ?>
 </div>
 

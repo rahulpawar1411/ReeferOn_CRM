@@ -669,6 +669,20 @@ function global_search(string $q, int $limit = 40): array
     ];
 }
 
+function wants_ajax(): bool
+{
+    return isset($_GET['ajax']) && (string) $_GET['ajax'] === '1';
+}
+
+function json_response(array $payload, int $code = 200): void
+{
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 /** Default list page size (hub tables). Logs use 35. */
 function page_size_default(): int
 {
@@ -728,23 +742,47 @@ function paginate_sql(string $countSql, string $dataSql, array $params, int $per
     return [$rows, $pg];
 }
 
+function pagination_next_url(array $pg, array $keepQuery = []): string
+{
+    if ((int) ($pg['page'] ?? 1) >= (int) ($pg['pages'] ?? 1)) {
+        return '';
+    }
+    $keepQuery = $keepQuery ?: $_GET;
+    unset($keepQuery['page'], $keepQuery['ajax']);
+    $keepQuery['page'] = (int) $pg['page'] + 1;
+    $keepQuery['ajax'] = '1';
+    return '?' . http_build_query($keepQuery);
+}
+
+function lazy_ajax_payload(array $pg, string $rowsHtml, array $keepQuery = []): array
+{
+    $page = (int) $pg['page'];
+    $pages = (int) $pg['pages'];
+    return [
+        'ok' => true,
+        'rows_html' => $rowsHtml,
+        'page' => $page,
+        'pages' => $pages,
+        'total' => (int) $pg['total'],
+        'per_page' => (int) $pg['per_page'],
+        'from' => (int) $pg['from'],
+        'to' => (int) $pg['to'],
+        'has_more' => $page < $pages,
+        'next_url' => pagination_next_url($pg, $keepQuery),
+    ];
+}
+
 /**
- * Render Prev / page numbers / Next. Keeps current query string except page.
+ * Render lazy-load footer (Load more + scroll sentinel) using shared loader UI in JS.
  */
 function render_pagination(array $pg, array $keepQuery = []): void
 {
-    if (($pg['pages'] ?? 1) <= 1 && ($pg['total'] ?? 0) === 0) {
+    if (($pg['total'] ?? 0) === 0) {
         return;
     }
 
     $keepQuery = $keepQuery ?: $_GET;
-    unset($keepQuery['page']);
-
-    $url = static function (int $page) use ($keepQuery): string {
-        $q = $keepQuery;
-        $q['page'] = $page;
-        return '?' . http_build_query($q);
-    };
+    unset($keepQuery['page'], $keepQuery['ajax']);
 
     $page = (int) $pg['page'];
     $pages = (int) $pg['pages'];
@@ -752,44 +790,29 @@ function render_pagination(array $pg, array $keepQuery = []): void
     $to = (int) $pg['to'];
     $total = (int) $pg['total'];
     $per = (int) $pg['per_page'];
+    $hasMore = $page < $pages;
+
+    $nextQuery = $keepQuery;
+    $nextQuery['page'] = $page + 1;
+    $nextQuery['ajax'] = '1';
+    $nextUrl = '?' . http_build_query($nextQuery);
     ?>
-    <div class="pagination">
-        <div class="pagination-info">
-            Showing <?= $from ?>–<?= $to ?> of <?= $total ?>
-            (<?= $per ?> per page)
+    <div class="pagination js-lazy-pager"
+         data-page="<?= (int) $page ?>"
+         data-pages="<?= (int) $pages ?>"
+         data-total="<?= (int) $total ?>"
+         data-per-page="<?= (int) $per ?>"
+         data-next-url="<?= $hasMore ? e($nextUrl) : '' ?>">
+        <div class="pagination-info js-lazy-info">
+            Showing <span class="js-lazy-from"><?= $from ?></span>–<span class="js-lazy-to"><?= $to ?></span>
+            of <span class="js-lazy-total"><?= $total ?></span>
+            (<?= $per ?> per page<?= $hasMore ? ' · scroll or Load more' : '' ?>)
         </div>
-        <?php if ($pages > 1): ?>
+        <?php if ($hasMore): ?>
         <div class="pagination-links">
-            <?php if ($page > 1): ?>
-                <a class="btn btn-secondary" href="<?= e($url($page - 1)) ?>">Prev</a>
-            <?php endif; ?>
-            <?php
-            $start = max(1, $page - 2);
-            $end = min($pages, $page + 2);
-            if ($start > 1) {
-                echo '<a href="' . e($url(1)) . '">1</a>';
-                if ($start > 2) {
-                    echo '<span>…</span>';
-                }
-            }
-            for ($i = $start; $i <= $end; $i++) {
-                if ($i === $page) {
-                    echo '<span class="pagination-current">' . $i . '</span>';
-                } else {
-                    echo '<a href="' . e($url($i)) . '">' . $i . '</a>';
-                }
-            }
-            if ($end < $pages) {
-                if ($end < $pages - 1) {
-                    echo '<span>…</span>';
-                }
-                echo '<a href="' . e($url($pages)) . '">' . $pages . '</a>';
-            }
-            ?>
-            <?php if ($page < $pages): ?>
-                <a class="btn btn-secondary" href="<?= e($url($page + 1)) ?>">Next</a>
-            <?php endif; ?>
+            <button type="button" class="btn js-lazy-more">Load more</button>
         </div>
+        <div class="lazy-sentinel js-lazy-sentinel" aria-hidden="true"></div>
         <?php endif; ?>
     </div>
     <?php
