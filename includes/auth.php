@@ -343,10 +343,86 @@ function auth_user(): ?array
     }
 }
 
+/** Max wrong passwords before a short lock. */
+function login_max_attempts(): int
+{
+    return 5;
+}
+
+/** Lock duration in seconds after too many wrong passwords. */
+function login_lock_seconds(): int
+{
+    return 30;
+}
+
+/** Seconds left on login lock (0 = not locked). */
+function login_lock_remaining(): int
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $until = (int) ($_SESSION['login_lock_until'] ?? 0);
+    if ($until <= 0) {
+        return 0;
+    }
+    $left = $until - time();
+    if ($left <= 0) {
+        unset($_SESSION['login_lock_until'], $_SESSION['login_fails']);
+        return 0;
+    }
+    return $left;
+}
+
+/** Clear failed-login counters after a successful sign-in. */
+function login_clear_attempts(): void
+{
+    unset($_SESSION['login_fails'], $_SESSION['login_lock_until']);
+}
+
+/**
+ * Record a failed login. After 5 failures, start a 30-second lock.
+ * Returns remaining lock seconds (0 if not locked yet).
+ */
+function login_register_failure(): int
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $fails = (int) ($_SESSION['login_fails'] ?? 0) + 1;
+    $_SESSION['login_fails'] = $fails;
+    if ($fails >= login_max_attempts()) {
+        $_SESSION['login_lock_until'] = time() + login_lock_seconds();
+        $_SESSION['login_fails'] = 0;
+        return login_lock_seconds();
+    }
+    return 0;
+}
+
+/** How many wrong tries are left before lock (for UI messages). */
+function login_attempts_left(): int
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $fails = (int) ($_SESSION['login_fails'] ?? 0);
+    $left = login_max_attempts() - $fails;
+    return max(0, $left);
+}
+
 /** Check login ID + password. On success, store user id in session. */
 function login_user(string $userId, string $password): array
 {
     ensure_auth_schema();
+
+    $lockLeft = login_lock_remaining();
+    if ($lockLeft > 0) {
+        return [
+            'ok' => false,
+            'error' => 'Too many wrong passwords. Try again in ' . $lockLeft . ' seconds.',
+            'lock_seconds' => $lockLeft,
+        ];
+    }
+
     $stmt = db()->prepare(
         'SELECT u.*, r.name AS role_name, r.permissions_json
          FROM users u
@@ -356,14 +432,39 @@ function login_user(string $userId, string $password): array
     $stmt->execute([$userId]);
     $u = $stmt->fetch();
     if (!$u) {
-        return ['ok' => false, 'error' => 'Invalid login ID or password.'];
+        $locked = login_register_failure();
+        if ($locked > 0) {
+            return [
+                'ok' => false,
+                'error' => 'Too many wrong passwords. Try again in ' . $locked . ' seconds.',
+                'lock_seconds' => $locked,
+            ];
+        }
+        return [
+            'ok' => false,
+            'error' => 'Invalid login ID or password. ' . login_attempts_left() . ' attempt(s) left.',
+            'attempts_left' => login_attempts_left(),
+        ];
     }
     if ($u['status'] !== 'Active') {
         return ['ok' => false, 'error' => 'Account is inactive. Contact Admin.'];
     }
     if (!password_verify($password, $u['password_hash'])) {
-        return ['ok' => false, 'error' => 'Invalid login ID or password.'];
+        $locked = login_register_failure();
+        if ($locked > 0) {
+            return [
+                'ok' => false,
+                'error' => 'Too many wrong passwords. Try again in ' . $locked . ' seconds.',
+                'lock_seconds' => $locked,
+            ];
+        }
+        return [
+            'ok' => false,
+            'error' => 'Invalid login ID or password. ' . login_attempts_left() . ' attempt(s) left.',
+            'attempts_left' => login_attempts_left(),
+        ];
     }
+    login_clear_attempts();
     session_regenerate_id(true);
     $_SESSION['auth_user_id'] = (int) $u['id'];
     return ['ok' => true, 'user' => $u];

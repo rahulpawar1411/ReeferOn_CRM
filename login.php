@@ -4,7 +4,6 @@
  *
  * User enters Username + Password.
  * On success we save the session and send them to Dashboard (or ?next= URL).
- * Demo accounts are listed on the page for easy testing.
  */
 require_once __DIR__ . '/includes/functions.php';
 
@@ -19,24 +18,31 @@ $errors = [];
 $userId = trim($_POST['user_id'] ?? '');
 $nextRaw = $_GET['next'] ?? ($_POST['next'] ?? '');
 $defaultNext = base_url('index.php');
+$lockSeconds = login_lock_remaining();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $password = $_POST['password'] ?? '';
-    $result = login_user($userId, $password);
-    if ($result['ok']) {
-        write_audit('users', $userId, 'LOGIN', null, 'Logged in');
-        flash('success', 'Welcome, ' . $result['user']['employee_name'] . '.');
+    if ($lockSeconds > 0) {
+        $errors[] = 'Too many wrong passwords. Try again in ' . $lockSeconds . ' seconds.';
+    } else {
+        $password = $_POST['password'] ?? '';
+        $result = login_user($userId, $password);
+        if ($result['ok']) {
+            write_audit('users', $userId, 'LOGIN', null, 'Logged in');
+            flash('success', 'Welcome, ' . $result['user']['employee_name'] . '.');
 
-        $next = is_string($nextRaw) ? $nextRaw : '';
-        // Security: only allow in-app paths like /CRM/... (block external redirects)
-        if ($next === '' || !str_starts_with($next, '/') || str_starts_with($next, '//') || str_contains($next, 'login.php')) {
-            $next = $defaultNext;
+            $next = is_string($nextRaw) ? $nextRaw : '';
+            // Security: only allow in-app paths like /CRM/... (block external redirects)
+            if ($next === '' || !str_starts_with($next, '/') || str_starts_with($next, '//') || str_contains($next, 'login.php')) {
+                $next = $defaultNext;
+            }
+            redirect($next);
         }
-        redirect($next);
+        $errors[] = $result['error'] ?? 'Login failed.';
+        $lockSeconds = (int) ($result['lock_seconds'] ?? login_lock_remaining());
     }
-    $errors[] = $result['error'] ?? 'Login failed.';
 }
 
+$locked = $lockSeconds > 0;
 $pageTitle = 'Login';
 ?>
 <!DOCTYPE html>
@@ -66,18 +72,25 @@ $pageTitle = 'Login';
             </div>
         <?php endif; ?>
 
-        <form method="post" action="<?= e(base_url('login.php')) ?>" data-loading-text="Signing in…">
+        <?php if ($locked): ?>
+            <div class="alert alert-error" id="login-lock-box" data-lock-seconds="<?= (int) $lockSeconds ?>">
+                <div>Too many wrong passwords.</div>
+                <div>Please wait <strong id="login-lock-timer"><?= (int) $lockSeconds ?></strong> seconds, then try again.</div>
+            </div>
+        <?php endif; ?>
+
+        <form method="post" action="<?= e(base_url('login.php')) ?>" data-loading-text="Signing in…" id="login-form" <?= $locked ? 'aria-disabled="true"' : '' ?>>
             <input type="hidden" name="next" value="<?= e(is_string($nextRaw) ? $nextRaw : '') ?>">
             <div class="form-group">
                 <label for="user_id">Username <span class="required">*</span></label>
-                <input id="user_id" type="text" name="user_id" required autofocus autocomplete="username"
-                       value="<?= e($userId) ?>" placeholder="e.g. admin">
+                <input id="user_id" type="text" name="user_id" required <?= $locked ? '' : 'autofocus' ?> autocomplete="username"
+                       value="<?= e($userId) ?>" placeholder="e.g. admin" <?= $locked ? 'disabled' : '' ?>>
             </div>
             <div class="form-group">
                 <label for="password">Password <span class="required">*</span></label>
                 <div class="password-field">
-                    <input id="password" type="password" name="password" required autocomplete="current-password">
-                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" title="Show password">
+                    <input id="password" type="password" name="password" required autocomplete="current-password" <?= $locked ? 'disabled' : '' ?>>
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" title="Show password" <?= $locked ? 'disabled' : '' ?>>
                         <!-- Open eye (password hidden) -->
                         <svg class="eye-icon eye-open" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/>
@@ -94,25 +107,12 @@ $pageTitle = 'Login';
                 </div>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn login-btn">Login</button>
+                <button type="submit" class="btn login-btn" id="login-submit" <?= $locked ? 'disabled' : '' ?>>
+                    <?= $locked ? 'Locked' : 'Login' ?>
+                </button>
             </div>
         </form>
 
-        <div class="login-demo">
-            <div class="login-demo-title">Demo Usernames</div>
-            <table class="login-demo-table">
-                <thead>
-                <tr><th>Username</th><th>Password</th><th>Role</th></tr>
-                </thead>
-                <tbody>
-                <tr><td><code>system</code></td><td><code>password</code></td><td>Super Admin</td></tr>
-                <tr><td><code>admin</code></td><td><code>admin123</code></td><td>Admin</td></tr>
-                <tr><td><code>sales</code></td><td><code>sales123</code></td><td>Salesperson</td></tr>
-                <tr><td><code>management</code></td><td><code>mgmt123</code></td><td>Management</td></tr>
-                <tr><td><code>viewer</code></td><td><code>viewer123</code></td><td>Viewer</td></tr>
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 <script src="<?= e(base_url('assets/js/app.js')) ?>"></script>
@@ -120,18 +120,52 @@ $pageTitle = 'Login';
 (function () {
   var input = document.getElementById('password');
   var btn = document.getElementById('togglePassword');
-  if (!input || !btn) return;
-  var openIcon = btn.querySelector('.eye-open');
-  var closedIcon = btn.querySelector('.eye-closed');
-  btn.addEventListener('click', function () {
-    var show = input.type === 'password';
-    input.type = show ? 'text' : 'password';
-    if (openIcon) openIcon.hidden = show;
-    if (closedIcon) closedIcon.hidden = !show;
-    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    btn.title = show ? 'Hide password' : 'Show password';
-    input.focus();
-  });
+  if (input && btn) {
+    var openIcon = btn.querySelector('.eye-open');
+    var closedIcon = btn.querySelector('.eye-closed');
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      if (openIcon) openIcon.hidden = show;
+      if (closedIcon) closedIcon.hidden = !show;
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.title = show ? 'Hide password' : 'Show password';
+      input.focus();
+    });
+  }
+
+  // After 5 wrong passwords: 30s countdown, then unlock the form
+  var box = document.getElementById('login-lock-box');
+  var timerEl = document.getElementById('login-lock-timer');
+  if (!box || !timerEl) return;
+  var left = parseInt(box.getAttribute('data-lock-seconds') || '0', 10);
+  if (!(left > 0)) return;
+
+  var userInput = document.getElementById('user_id');
+  var passInput = document.getElementById('password');
+  var submitBtn = document.getElementById('login-submit');
+  var toggleBtn = document.getElementById('togglePassword');
+
+  var tick = setInterval(function () {
+    left -= 1;
+    if (left <= 0) {
+      clearInterval(tick);
+      timerEl.textContent = '0';
+      if (userInput) userInput.disabled = false;
+      if (passInput) passInput.disabled = false;
+      if (toggleBtn) toggleBtn.disabled = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login';
+      }
+      box.innerHTML = '<div>You can try logging in again.</div>';
+      if (userInput) userInput.focus();
+      return;
+    }
+    timerEl.textContent = String(left);
+    if (submitBtn) submitBtn.textContent = 'Wait ' + left + 's';
+  }, 1000);
 })();
 </script>
 </body>

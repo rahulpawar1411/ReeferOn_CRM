@@ -7,6 +7,7 @@
 $pageTitle = 'Help – How to use';
 $currentPage = 'help';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('help.view');
 require_once __DIR__ . '/../../includes/header.php';
 
 $step = $_GET['step'] ?? 'overview';
@@ -14,6 +15,7 @@ $allowed = ['overview', 'flow', 'codes', 'health', '1', '2', '3', '4', '5', '6',
 if (!in_array($step, $allowed, true)) {
     $step = 'overview';
 }
+$rulesDocUrl = base_url('modules/help/download_rules.php');
 ?>
 
 <div class="card">
@@ -22,6 +24,10 @@ if (!in_array($step, $allowed, true)) {
         ReeferON CRM is one <strong>connected</strong> system:
         <strong>Sales Prospect → Onboarding → Admin Approval → Customer Master</strong>.
         Initial sales data is reused — you do not retype the same company details.
+    </p>
+    <p>
+        <a class="btn" href="<?= e($rulesDocUrl) ?>">Download Rules (Word)</a>
+        <span class="step-note" style="margin-left:8px">Full rules + how the app works — opens in Microsoft Word.</span>
     </p>
 
     <div class="tabs">
