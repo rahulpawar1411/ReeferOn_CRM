@@ -1,8 +1,16 @@
 <?php
+/**
+ * Login page
+ *
+ * User enters Login ID + Password.
+ * On success we save the session and send them to Dashboard (or ?next= URL).
+ * Demo accounts are listed on the page for easy testing.
+ */
 require_once __DIR__ . '/includes/functions.php';
 
 ensure_auth_schema();
 
+// Already logged in → go to dashboard
 if (auth_user()) {
     redirect(base_url('index.php'));
 }
@@ -20,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Welcome, ' . $result['user']['employee_name'] . '.');
 
         $next = is_string($nextRaw) ? $nextRaw : '';
-        // Only allow in-app relative paths (e.g. /CRM/…)
+        // Security: only allow in-app paths like /CRM/... (block external redirects)
         if ($next === '' || !str_starts_with($next, '/') || str_starts_with($next, '//') || str_contains($next, 'login.php')) {
             $next = $defaultNext;
         }

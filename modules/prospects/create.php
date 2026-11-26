@@ -1,4 +1,10 @@
 <?php
+/**
+ * Create prospect
+ *
+ * Form to add a new sales lead (company, contact, service needs).
+ * Permission: prospects.create
+ */
 $pageTitle = 'Create Prospect';
 $currentPage = 'prospect_create';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -7,6 +13,7 @@ require_perm('prospects.create');
 $user = current_user();
 $errors = [];
 
+// Save new prospect on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $company_name = trim($_POST['company_name'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
@@ -110,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             write_audit('prospects', $prospectCode, 'CREATE', null, $company_name);
 
             $pdo->commit();
-            flash('success', 'Prospect created: ' . $prospectCode);
+            flash('success', 'Prospect created: ' . $prospectCode, 'create');
             redirect(base_url('modules/prospects/view.php?id=' . $pk));
         } catch (Throwable $e) {
             if (db()->inTransaction()) {

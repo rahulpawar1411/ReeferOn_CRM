@@ -1,4 +1,10 @@
 <?php
+/**
+ * Add existing customer
+ *
+ * Create a customer directly (skip prospect pipeline). Checks duplicates.
+ * Permission: customers.create
+ */
 $pageTitle = 'Add Existing Customer';
 $currentPage = 'customer_create';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -29,6 +35,7 @@ $form = [
     'status' => 'Active',
 ];
 
+// Save new customer on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($form as $k => $_) {
         if (isset($_POST[$k])) {
@@ -125,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pk = (int) db()->lastInsertId();
             write_audit('customers', $code, 'CREATE', null, 'Direct existing customer');
-            flash('success', 'Existing customer added: ' . $code);
+            flash('success', 'Existing customer added: ' . $code, 'create');
             redirect(base_url('modules/customers/view.php?id=' . $pk));
         } catch (Throwable $e) {
             $errors[] = 'Could not create: ' . $e->getMessage();

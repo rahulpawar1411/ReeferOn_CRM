@@ -1,4 +1,10 @@
 <?php
+/**
+ * Reports menu
+ *
+ * Links to on-screen reports and Excel (CSV) downloads.
+ * Permission: reports.view
+ */
 $pageTitle = 'Reports';
 $currentPage = 'reports';
 require_once __DIR__ . '/../../includes/functions.php';

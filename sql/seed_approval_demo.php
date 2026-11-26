@@ -159,16 +159,34 @@ foreach ($demos as $d) {
         ]);
         $onboardingPk = (int) $pdo->lastInsertId();
 
+        // Create real demo PDFs so View / Download works
+        $demoDir = __DIR__ . '/../uploads/documents/demo';
+        if (!is_dir($demoDir)) {
+            mkdir($demoDir, 0755, true);
+        }
         foreach (onboarding_doc_types() as $type) {
             $safe = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $type));
             $file = $safe . '-demo.pdf';
-            $path = 'uploads/onboarding/demo/' . $file;
+            $path = 'uploads/documents/demo/' . $file;
+            $abs = __DIR__ . '/../' . $path;
+            if (!is_file($abs)) {
+                $label = substr(preg_replace('/[^A-Za-z0-9 \-]/', '', $type) ?: 'Demo', 0, 40);
+                file_put_contents(
+                    $abs,
+                    "%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+                    . "2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+                    . "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 200] /Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n"
+                    . "4 0 obj<< /Length 55 >>stream\nBT /F1 16 Tf 40 100 Td ({$label}) Tj ET\nendstream endobj\n"
+                    . "5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+                    . "trailer<< /Root 1 0 R >>\n%%EOF\n"
+                );
+            }
             $docIns->execute([
                 $onboardingPk,
                 $type,
                 $file,
                 $path,
-                24576,
+                (int) (filesize($abs) ?: 1024),
                 'application/pdf',
                 'Received',
                 $userId,

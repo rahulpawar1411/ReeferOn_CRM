@@ -1,4 +1,10 @@
 <?php
+/**
+ * Approve or reject onboarding
+ *
+ * Admin decision form. Approve creates customer code REO-CUS-xxxx.
+ * Permission: approvals.decide
+ */
 $pageTitle = 'Admin Approve / Reject';
 $currentPage = 'approvals';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -23,7 +29,7 @@ if (!$row) {
 }
 
 $docsStmt = db()->prepare(
-    'SELECT doc_type, status, file_name, file_path, remarks FROM onboarding_documents WHERE onboarding_pk = ? ORDER BY id'
+    'SELECT id, doc_type, status, file_name, file_path, remarks FROM onboarding_documents WHERE onboarding_pk = ? ORDER BY id'
 );
 $docsStmt->execute([(int) $row['onboarding_pk']]);
 $documents = $docsStmt->fetchAll();
@@ -35,6 +41,7 @@ if ($row['department'] !== 'Admin') {
 
 $errors = [];
 
+// Save Approve / Reject decision
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $decision = $_POST['decision'] ?? '';
     $remarks = trim($_POST['remarks'] ?? '');
@@ -114,7 +121,17 @@ require_once __DIR__ . '/../../includes/header.php';
                 <tr>
                     <td><?= e($doc['doc_type']) ?></td>
                     <td><span class="badge"><?= e($doc['status']) ?></span></td>
-                    <td><?= e($doc['file_name'] ?? '-') ?></td>
+                    <td>
+                        <?php if (!empty($doc['file_path'])): ?>
+                            <?= e($doc['file_name'] ?? 'file') ?>
+                            —
+                            <a href="<?= e(base_url('modules/onboarding/download.php?id=' . (int) $doc['id'])) ?>" target="_blank" rel="noopener">View</a>
+                            ·
+                            <a href="<?= e(base_url('modules/onboarding/download.php?id=' . (int) $doc['id'] . '&mode=download')) ?>">Download</a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
                     <td><?= e($doc['remarks'] ?? '-') ?></td>
                 </tr>
             <?php endforeach; ?>

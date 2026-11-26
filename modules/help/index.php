@@ -1,4 +1,9 @@
 <?php
+/**
+ * Help guide
+ *
+ * In-app how-to for Prospect → Onboarding → Approval → Customer flow.
+ */
 $pageTitle = 'Help – How to use';
 $currentPage = 'help';
 require_once __DIR__ . '/../../includes/functions.php';

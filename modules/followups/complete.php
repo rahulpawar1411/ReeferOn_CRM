@@ -1,4 +1,9 @@
 <?php
+/**
+ * Complete follow-up
+ *
+ * Marks an open follow-up as Completed, then returns to the list.
+ */
 require_once __DIR__ . '/../../includes/functions.php';
 
 $id = (int) ($_GET['id'] ?? 0);
@@ -18,6 +23,7 @@ if ($f['status'] !== 'Open') {
 
 $user = current_user();
 
+// Mark this follow-up completed
 try {
     $upd = db()->prepare("UPDATE followups SET status = 'Completed' WHERE id = ?");
     $upd->execute([$id]);

@@ -1,4 +1,7 @@
 <?php
+/**
+ * Logout – clear the session and return to the login page.
+ */
 require_once __DIR__ . '/includes/functions.php';
 
 $u = auth_user();

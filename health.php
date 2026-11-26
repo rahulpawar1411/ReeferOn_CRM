@@ -1,6 +1,8 @@
 <?php
 /**
- * ReeferON CRM – Health check (JSON only)
+ * Health check (JSON)
+ *
+ * Checks PHP, folders, DB connection, and required tables.
  * URL: http://localhost/CRM/health.php
  */
 require_once __DIR__ . '/config/database.php';

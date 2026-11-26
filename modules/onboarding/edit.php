@@ -1,4 +1,9 @@
 <?php
+/**
+ * Edit onboarding
+ *
+ * Fill GST/PAN/addresses and submit for Admin approval when ready.
+ */
 $pageTitle = 'Edit Onboarding';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -16,6 +21,7 @@ if (!$o) {
 $user = current_user();
 $errors = [];
 
+// Save draft or submit for Admin approval
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = trim($_POST['customer_name'] ?? '');
     $brand_name = trim($_POST['brand_name'] ?? '');
@@ -124,9 +130,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            flash('success', $action === 'submit'
-                ? 'Onboarding submitted for Admin approval.'
-                : 'Onboarding saved.');
+            flash(
+                'success',
+                $action === 'submit'
+                    ? 'Onboarding submitted for Admin approval.'
+                    : 'Onboarding saved.',
+                'edit'
+            );
             redirect(base_url('modules/onboarding/view.php?id=' . $id));
         } catch (Throwable $e) {
             $errors[] = 'Could not save: ' . $e->getMessage();

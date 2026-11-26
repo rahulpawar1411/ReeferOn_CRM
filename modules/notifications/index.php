@@ -1,4 +1,9 @@
 <?php
+/**
+ * Notifications list
+ *
+ * Unread / all alerts, plus live counts for due follow-ups and approvals.
+ */
 $pageTitle = 'Notifications';
 $currentPage = 'notifications';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -8,7 +13,7 @@ if (!in_array($tab, ['unread', 'all'], true)) {
     $tab = 'unread';
 }
 
-// Mark all read
+// Mark every notification as read
 if (isset($_GET['mark_all']) && $_GET['mark_all'] === '1') {
     try {
         db()->exec('UPDATE notifications SET is_read = 1 WHERE is_read = 0');

@@ -1,9 +1,23 @@
 <?php
+/**
+ * ReeferON CRM – Shared helper functions
+ *
+ * This file is used by almost every page.
+ * It gives you: URLs, phone helpers, flash messages, IDs, audit logs,
+ * pipeline/onboarding helpers, search, pagination, and Excel export.
+ *
+ * Tip for developers: search for "SECTION:" to jump between parts.
+ */
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/auth.php';
 
+// =============================================================================
+// SECTION: URLs and safe HTML
+// =============================================================================
+
 /**
- * App base URL path (works from any module depth under /CRM or /reeferon-crm).
+ * Build a full app path, e.g. base_url('login.php') → /CRM/login.php
+ * Works even when the page is deep inside /modules/...
  */
 function base_url(string $path = ''): string
 {
@@ -32,7 +46,10 @@ function base_url(string $path = ''): string
     return $base . ($path !== '' ? '/' . $path : '');
 }
 
-/** Normalize stored app links (fix CLI seeds missing /CRM) */
+/**
+ * Fix stored links so they always open under /CRM.
+ * Older demo seeds sometimes saved paths without the /CRM folder.
+ */
 function app_url(?string $url): string
 {
     $url = trim((string) $url);
@@ -54,12 +71,17 @@ function app_url(?string $url): string
     return base_url($url);
 }
 
+/** Escape text before printing in HTML (stops XSS). */
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-/** Digits only, strip leading 91/0, max 10 */
+// =============================================================================
+// SECTION: Phone helpers (+91 India, exactly 10 digits)
+// =============================================================================
+
+/** Keep only digits; remove leading 91 or 0; max 10 digits. */
 function phone_digits(?string $raw): string
 {
     $digits = preg_replace('/\D+/', '', (string) $raw) ?? '';
@@ -105,7 +127,11 @@ function render_phone_input(string $name, ?string $value, bool $required = false
     echo '</div>';
 }
 
-/** Open right-side filter flip panel (call before filter fields) */
+// =============================================================================
+// SECTION: Right-side filter drawer (Filters button on list pages)
+// =============================================================================
+
+/** Start the filter drawer HTML. Put form fields next, then call filter_flip_end(). */
 function filter_flip_start(string $title = 'Filters', bool $active = false, string $resetUrl = '', string $leadingHtml = ''): void
 {
     static $n = 0;
@@ -137,20 +163,40 @@ function filter_flip_end(): void
     echo '</div></aside>';
 }
 
+// =============================================================================
+// SECTION: Redirect, flash messages, current logged-in user
+// =============================================================================
+
+/** Send the browser to another page and stop this script. */
 function redirect(string $path): void
 {
     header('Location: ' . $path);
     exit;
 }
 
-function flash(string $type, string $message): void
+/**
+ * Save a one-time message for the next page.
+ *
+ * $action (optional): 'create' | 'edit' | 'delete'
+ * Success + action → top-right toast with Undo (acknowledgement only).
+ */
+function flash(string $type, string $message, ?string $action = null): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
-    $_SESSION['flash'] = ['type' => $type, 'message' => $message];
+    $action = $action !== null ? strtolower(trim($action)) : null;
+    if ($action !== null && !in_array($action, ['create', 'edit', 'delete'], true)) {
+        $action = null;
+    }
+    $_SESSION['flash'] = [
+        'type' => $type,
+        'message' => $message,
+        'action' => $action,
+    ];
 }
 
+/** Read and clear the flash message (show once, then remove). */
 function get_flash(): ?array
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -164,6 +210,7 @@ function get_flash(): ?array
     return $flash;
 }
 
+/** Return the logged-in user as a simple array (or Guest if not logged in). */
 function current_user(): array
 {
     $u = auth_user();
@@ -189,8 +236,13 @@ function current_user(): array
     ];
 }
 
+// =============================================================================
+// SECTION: Business IDs and audit log
+// =============================================================================
+
 /**
- * Generate next business ID using id_sequences table (safe under concurrency).
+ * Make the next ID like REO-LEAD-0001 or REO-CUS-0001.
+ * Uses a DB lock so two users cannot get the same number at the same time.
  */
 function next_business_id(string $seqName): string
 {
@@ -222,6 +274,7 @@ function next_business_id(string $seqName): string
     }
 }
 
+/** Save who did what (shown later in Masters → Logs). */
 function write_audit(string $module, string $recordId, string $action, ?string $oldValue, ?string $newValue): void
 {
     $user = current_user();
@@ -240,6 +293,11 @@ function write_audit(string $module, string $recordId, string $action, ?string $
     ]);
 }
 
+// =============================================================================
+// SECTION: Dropdown lists (stages, docs, statuses)
+// =============================================================================
+
+/** Format amount as Indian Rupees, e.g. ₹1,250.00 */
 function format_money($amount): string
 {
     if ($amount === null || $amount === '') {
@@ -248,6 +306,7 @@ function format_money($amount): string
     return '₹' . number_format((float) $amount, 2);
 }
 
+/** Sales pipeline stages – order matters for the sales journey. */
 function pipeline_stages(): array
 {
     return [
@@ -266,11 +325,13 @@ function pipeline_stages(): array
     ];
 }
 
+/** How the salesperson contacted the prospect. */
 function interaction_types(): array
 {
     return ['Phone Call', 'Email', 'Meeting', 'WhatsApp', 'Other'];
 }
 
+/** Documents needed before Admin can approve onboarding. */
 function onboarding_doc_types(): array
 {
     return [
@@ -284,10 +345,9 @@ function onboarding_doc_types(): array
 }
 
 /**
- * Docs ready for Admin submit: each type must be Received (with file) or Not Applicable.
- * Pending / Rejected / missing file blocks submit.
- *
- * @return string[] list of blocking messages (empty = OK)
+ * Check if all onboarding docs are ready to submit to Admin.
+ * Each doc must be "Received" (with file) or "Not Applicable".
+ * Returns a list of problems; empty list means OK to submit.
  */
 function onboarding_doc_submit_errors(int $onboardingPk): array
 {
@@ -365,8 +425,13 @@ function customer_statuses(): array
     return ['Active', 'Inactive', 'On Hold'];
 }
 
+// =============================================================================
+// SECTION: Customer duplicates, Admin approval, pipeline stage change
+// =============================================================================
+
 /**
- * Possible duplicates by GSTIN and/or customer name (show matches; never auto-merge).
+ * Find customers that may already exist (same GSTIN or same name).
+ * We only warn the user — we never auto-merge records.
  */
 function find_customer_duplicates(string $customerName, ?string $gstin, ?int $excludeId = null): array
 {
@@ -403,7 +468,9 @@ function find_customer_duplicates(string $customerName, ?string $gstin, ?int $ex
 }
 
 /**
- * Decide Admin approval. On Approve → generate customer code + Customer Master.
+ * Admin Approve or Reject one onboarding approval row.
+ * On Approve: create Customer Code + Customer Master + activate prospect.
+ * On Reject: mark onboarding Rejected so sales can fix and resubmit.
  */
 function decide_onboarding_approval(int $approvalId, string $decision, string $remarks): array
 {
@@ -579,7 +646,7 @@ function decide_onboarding_approval(int $approvalId, string $decision, string $r
 }
 
 /**
- * Reset approvals to Pending when resubmitting a rejected onboarding.
+ * Put approval rows back to Pending when a rejected onboarding is sent again.
  */
 function reset_onboarding_approvals(int $onboardingPk): void
 {
@@ -592,7 +659,180 @@ function reset_onboarding_approvals(int $onboardingPk): void
 }
 
 /**
- * Change prospect pipeline stage + write history + audit.
+ * True only when user typed exactly "delete" in the confirm popup.
+ */
+function delete_confirm_ok(?string $typed): bool
+{
+    return strtolower(trim((string) $typed)) === 'delete';
+}
+
+/**
+ * Centered delete confirmation popup (type "delete" to enable the button).
+ *
+ * @param array{title?:string,message?:string,item_label?:string,cancel_url?:string,hidden?:array<string,string|int>} $opts
+ */
+function render_delete_confirm_modal(array $opts = []): void
+{
+    $title = $opts['title'] ?? 'Confirm delete';
+    $message = $opts['message'] ?? 'Are you sure you want to delete this?';
+    $item = $opts['item_label'] ?? '';
+    $cancelUrl = $opts['cancel_url'] ?? '';
+    $hidden = $opts['hidden'] ?? [];
+    ?>
+<div class="delete-modal-backdrop js-delete-modal"
+     aria-hidden="false"
+     data-cancel-url="<?= e($cancelUrl) ?>">
+    <div class="delete-modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="delete-modal-head">
+            <h2 id="deleteModalTitle"><?= e($title) ?></h2>
+            <button type="button" class="delete-modal-x js-delete-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <p class="delete-modal-msg"><?= e($message) ?></p>
+        <?php if ($item !== ''): ?>
+            <p class="delete-modal-item"><?= e($item) ?></p>
+        <?php endif; ?>
+        <form method="post" action="" class="js-delete-confirm-form js-no-loader">
+            <?php foreach ($hidden as $name => $value): ?>
+                <input type="hidden" name="<?= e((string) $name) ?>" value="<?= e((string) $value) ?>">
+            <?php endforeach; ?>
+            <div class="form-group">
+                <label>Type <strong>delete</strong> to confirm</label>
+                <input type="text" name="confirm_text" class="js-delete-confirm-input" autocomplete="off"
+                       placeholder="delete" autofocus>
+            </div>
+            <div class="form-group">
+                <label>Reason (optional)</label>
+                <textarea name="reason" rows="2" placeholder="Optional note"></textarea>
+            </div>
+            <div class="delete-modal-actions">
+                <button type="submit" class="btn btn-danger js-delete-confirm-btn" disabled>Delete</button>
+                <?php if ($cancelUrl !== ''): ?>
+                    <a class="btn btn-secondary js-delete-modal-close" href="<?= e($cancelUrl) ?>">Cancel</a>
+                <?php else: ?>
+                    <button type="button" class="btn btn-secondary js-delete-modal-close">Cancel</button>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+</div>
+    <?php
+}
+
+/**
+ * Soft-delete a prospect: set status = Inactive (row stays for history/logs).
+ * Does not permanently remove the record.
+ */
+function soft_delete_prospect(int $prospectPk, string $reason = ''): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT id, prospect_id, status FROM prospects WHERE id = ?');
+    $stmt->execute([$prospectPk]);
+    $p = $stmt->fetch();
+    if (!$p) {
+        throw new RuntimeException('Prospect not found.');
+    }
+    if ($p['status'] === 'Inactive') {
+        throw new RuntimeException('Prospect is already Inactive.');
+    }
+    $pdo->prepare('UPDATE prospects SET status = ?, updated_by = ? WHERE id = ?')
+        ->execute(['Inactive', current_user()['id'], $prospectPk]);
+    write_audit('prospects', $p['prospect_id'], 'SOFT_DELETE', 'Active', $reason !== '' ? $reason : 'Inactive');
+}
+
+/**
+ * Soft-delete a customer: set status = Inactive (keeps Customer Code + history).
+ */
+function soft_delete_customer(int $customerPk, string $reason = ''): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT id, customer_code, status FROM customers WHERE id = ?');
+    $stmt->execute([$customerPk]);
+    $c = $stmt->fetch();
+    if (!$c) {
+        throw new RuntimeException('Customer not found.');
+    }
+    if ($c['status'] === 'Inactive') {
+        throw new RuntimeException('Customer is already Inactive.');
+    }
+    $pdo->prepare('UPDATE customers SET status = ?, updated_by = ? WHERE id = ?')
+        ->execute(['Inactive', current_user()['id'], $customerPk]);
+    write_audit('customers', $c['customer_code'], 'SOFT_DELETE', $c['status'], $reason !== '' ? $reason : 'Inactive');
+}
+
+/**
+ * Soft-delete (deactivate) a user login. Cannot deactivate yourself.
+ */
+function soft_delete_user(int $userPk, string $reason = ''): void
+{
+    $pdo = db();
+    $me = current_user();
+    if ((int) $me['id'] === $userPk) {
+        throw new RuntimeException('You cannot deactivate your own login.');
+    }
+    $stmt = $pdo->prepare('SELECT id, user_id, employee_name, status FROM users WHERE id = ?');
+    $stmt->execute([$userPk]);
+    $u = $stmt->fetch();
+    if (!$u) {
+        throw new RuntimeException('User not found.');
+    }
+    if ($u['status'] === 'Inactive') {
+        throw new RuntimeException('User is already Inactive.');
+    }
+    $pdo->prepare('UPDATE users SET status = ? WHERE id = ?')->execute(['Inactive', $userPk]);
+    write_audit('users', $u['user_id'], 'SOFT_DELETE', 'Active', $reason !== '' ? $reason : ('Deactivated ' . $u['employee_name']));
+}
+
+/**
+ * Remove an uploaded document file and reset row to Pending (not a hard DB delete).
+ */
+function clear_onboarding_document(int $docId): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare(
+        'SELECT d.*, o.onboarding_id, o.overall_status
+         FROM onboarding_documents d
+         JOIN onboarding o ON o.id = d.onboarding_pk
+         WHERE d.id = ?'
+    );
+    $stmt->execute([$docId]);
+    $d = $stmt->fetch();
+    if (!$d) {
+        throw new RuntimeException('Document not found.');
+    }
+    if (in_array($d['overall_status'], ['Approved'], true)) {
+        throw new RuntimeException('Cannot clear documents after onboarding is Approved.');
+    }
+
+    if (!empty($d['file_path'])) {
+        $appRoot = realpath(__DIR__ . '/..');
+        $uploadsRoot = realpath(__DIR__ . '/../uploads');
+        $rel = ltrim(str_replace('\\', '/', (string) $d['file_path']), '/');
+        $candidate = $appRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        $full = realpath($candidate);
+        $norm = static fn (?string $p): string => strtolower(str_replace('\\', '/', (string) $p));
+        if (
+            $full
+            && $uploadsRoot
+            && is_file($full)
+            && str_starts_with($norm($full), $norm($uploadsRoot) . '/')
+        ) {
+            @unlink($full);
+        }
+    }
+
+    $pdo->prepare(
+        "UPDATE onboarding_documents SET
+            file_name = NULL, file_path = NULL, file_size = NULL, mime_type = NULL,
+            status = 'Pending', remarks = NULL, uploaded_by = NULL, uploaded_by_name = NULL
+         WHERE id = ?"
+    )->execute([$docId]);
+
+    write_audit('onboarding_documents', $d['onboarding_id'], 'CLEAR', $d['doc_type'], $d['file_name'] ?? '');
+}
+
+/**
+ * Move a prospect to a new pipeline stage.
+ * Also writes stage history, audit log, and a notification.
  */
 function change_prospect_stage(int $prospectPk, string $toStage, string $remarks, ?string $nextFollowupDate = null): void
 {
@@ -662,8 +902,13 @@ function change_prospect_stage(int $prospectPk, string $toStage, string $remarks
     }
 }
 
+// =============================================================================
+// SECTION: In-app notifications
+// =============================================================================
+
 /**
- * In-app notification (user_id NULL = visible to all until auth roles).
+ * Create a bell/notification item.
+ * user_id NULL means any logged-in user can see it.
  */
 function create_notification(
     string $eventType,
@@ -708,7 +953,7 @@ function unread_notifications_count(?int $userId = null): int
     }
 }
 
-/** Pending Admin approvals (red-dot until cleared) */
+/** How many Admin approvals are still waiting (red dot on menu). */
 function pending_approvals_count(): int
 {
     try {
@@ -724,8 +969,12 @@ function pending_approvals_count(): int
     }
 }
 
+// =============================================================================
+// SECTION: Excel/CSV export and Global Search
+// =============================================================================
+
 /**
- * Stream CSV download (Excel-friendly).
+ * Download rows as a CSV file that Excel can open.
  */
 function export_csv(string $filename, array $headers, array $rows): void
 {
@@ -743,7 +992,8 @@ function export_csv(string $filename, array $headers, array $rows): void
 }
 
 /**
- * Global search across prospects / onboarding / customers.
+ * Search prospects, onboarding, and customers by ID, name, phone, or GSTIN.
+ * Used by Dashboard search and live suggestions.
  */
 function global_search(string $q, int $limit = 40): array
 {
@@ -807,11 +1057,17 @@ function global_search(string $q, int $limit = 40): array
     ];
 }
 
+// =============================================================================
+// SECTION: AJAX helpers and pagination (Load more / page links)
+// =============================================================================
+
+/** True when the page was called with ?ajax=1 (used by lazy tables). */
 function wants_ajax(): bool
 {
     return isset($_GET['ajax']) && (string) $_GET['ajax'] === '1';
 }
 
+/** Send JSON to the browser and stop (for API / ajax calls). */
 function json_response(array $payload, int $code = 200): void
 {
     http_response_code($code);

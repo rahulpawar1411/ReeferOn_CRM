@@ -1,6 +1,9 @@
 <?php
 /**
- * Start onboarding from a Commercial Approved prospect (auto-copy data).
+ * Initiate onboarding
+ *
+ * Starts onboarding from a Commercial Approved prospect (copies sales data).
+ * Also creates pending document rows and Admin approval.
  */
 require_once __DIR__ . '/../../includes/functions.php';
 
@@ -80,7 +83,7 @@ try {
     // Move prospect stage to Onboarding (separate transaction)
     change_prospect_stage($prospectPk, 'Onboarding', 'Customer onboarding initiated: ' . $onboardingId);
 
-    flash('success', 'Onboarding started: ' . $onboardingId . ' (prospect data copied). Complete extra details.');
+    flash('success', 'Onboarding started: ' . $onboardingId . ' (prospect data copied). Complete extra details.', 'create');
     redirect(base_url('modules/onboarding/edit.php?id=' . $onboardingPk));
 } catch (Throwable $e) {
     if (db()->inTransaction()) {

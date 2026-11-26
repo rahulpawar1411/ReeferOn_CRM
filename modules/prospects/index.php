@@ -1,4 +1,10 @@
 <?php
+/**
+ * Prospects list
+ *
+ * Shows all sales leads with search + Filters drawer + Excel export.
+ * Permission: prospects.view
+ */
 $pageTitle = 'Prospects';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -10,7 +16,9 @@ $business_type = trim($_GET['business_type'] ?? '');
 $city = trim($_GET['city'] ?? '');
 $date_from = trim($_GET['date_from'] ?? '');
 $date_to = trim($_GET['date_to'] ?? '');
+$export = isset($_GET['export']) && $_GET['export'] === '1';
 
+// Build list filters from GET params
 $where = ' WHERE 1=1';
 $params = [];
 
@@ -43,6 +51,41 @@ if ($date_to !== '') {
     $params[] = $date_to;
 }
 
+// Excel export (current filters, max 5000 rows)
+if ($export) {
+    $stmt = db()->prepare('SELECT * FROM prospects' . $where . ' ORDER BY id DESC LIMIT 5000');
+    $stmt->execute($params);
+    $exportRows = $stmt->fetchAll();
+    $headers = [
+        'Prospect ID', 'Lead Date', 'Company', 'Contact', 'Designation', 'Phone', 'Email',
+        'Business Type', 'Industry', 'City', 'Service', 'Temperature', 'Stage', 'Status',
+        'Salesperson', 'Next Follow-up', 'Created',
+    ];
+    $out = [];
+    foreach ($exportRows as $r) {
+        $out[] = [
+            $r['prospect_id'],
+            $r['lead_creation_date'],
+            $r['company_name'],
+            $r['contact_person'],
+            $r['designation'] ?? '',
+            $r['mobile'],
+            $r['email'] ?? '',
+            $r['business_type'],
+            $r['industry'] ?? '',
+            $r['city'] ?? '',
+            $r['service_required'],
+            $r['temperature_requirement'] ?? '',
+            $r['pipeline_stage'],
+            $r['status'],
+            $r['salesperson_name'] ?? '',
+            $r['next_followup_date'] ?? '',
+            $r['created_at'] ?? '',
+        ];
+    }
+    export_csv('reeferon_prospects_' . date('Ymd_His') . '.csv', $headers, $out);
+}
+
 [$rows, $pg] = paginate_sql(
     'SELECT COUNT(*) FROM prospects' . $where,
     'SELECT * FROM prospects' . $where . ' ORDER BY id DESC',
@@ -64,8 +107,13 @@ $renderProspectRows = static function (array $rows): string {
                     <td><span class="badge"><?= e($row['pipeline_stage']) ?></span></td>
                     <td><?= e($row['next_followup_date'] ?? '-') ?></td>
                     <td>
-                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $row['id'])) ?>">View</a> |
-                        <a href="<?= e(base_url('modules/prospects/edit.php?id=' . $row['id'])) ?>">Edit</a>
+                        <a href="<?= e(base_url('modules/prospects/view.php?id=' . $row['id'])) ?>">View</a>
+                        <?php if (can('prospects.edit')): ?>
+                            | <a href="<?= e(base_url('modules/prospects/edit.php?id=' . $row['id'])) ?>">Edit</a>
+                        <?php endif; ?>
+                        <?php if (can('prospects.delete') && ($row['status'] ?? '') !== 'Inactive'): ?>
+                            | <a class="link-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $row['id'])) ?>">Delete</a>
+                        <?php endif; ?>
                     </td>
                 </tr>
     <?php endforeach;
@@ -83,8 +131,18 @@ require_once __DIR__ . '/../../includes/header.php';
     <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups. <?= (int) page_size_default() ?> rows per page.</p>
     <?php
     $filterActive = ($q !== '' || $stage !== '' || $business_type !== '' || $city !== '' || $date_from !== '' || $date_to !== '');
-    $newBtn = '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a>';
-    filter_flip_start('Prospect Filters', $filterActive, base_url('modules/prospects/index.php'), $newBtn);
+    $excelUrl = base_url('modules/prospects/index.php') . '?' . http_build_query(array_filter([
+        'q' => $q,
+        'stage' => $stage,
+        'business_type' => $business_type,
+        'city' => $city,
+        'date_from' => $date_from,
+        'date_to' => $date_to,
+        'export' => '1',
+    ], static fn($v) => $v !== '' && $v !== null));
+    $leading = '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a> '
+        . '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
+    filter_flip_start('Prospect Filters', $filterActive, base_url('modules/prospects/index.php'), $leading);
     ?>
     <form method="get" class="filter-flip-form" action="">
         <div class="field">

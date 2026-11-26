@@ -1,4 +1,10 @@
 <?php
+/**
+ * Edit / create role
+ *
+ * Set role name and permission checkboxes (what menus/actions are allowed).
+ * Permission: roles.manage
+ */
 $pageTitle = 'Edit Role';
 $currentPage = 'roles';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -24,6 +30,7 @@ $name = $role['name'] ?? '';
 $description = $role['description'] ?? '';
 $perms = $role ? decode_permissions($role['permissions_json']) : role_default_checks('salesperson');
 
+// Save role name + permission checkboxes
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $description = trim($_POST['description'] ?? '');
@@ -53,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $id,
                 ]);
                 write_audit('roles', $name, 'UPDATE', null, 'Permissions updated');
-                flash('success', 'Role updated.');
+                flash('success', 'Role updated.', 'edit');
                 redirect(base_url('modules/roles/edit.php?id=' . $id));
             } else {
                 $ins = db()->prepare(
@@ -67,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $newId = (int) db()->lastInsertId();
                 write_audit('roles', $name, 'CREATE', null, 'Role created');
-                flash('success', 'Role created.');
+                flash('success', 'Role created.', 'create');
                 redirect(base_url('modules/roles/edit.php?id=' . $newId));
             }
         } catch (Throwable $e) {
@@ -83,7 +90,9 @@ require_once __DIR__ . '/../../includes/header.php';
 <div class="card">
     <h2><?= $role ? 'Edit checkboxes' : 'Create role' ?></h2>
     <p class="step-note">
-        Role dropdown se role choose karo, checkboxes tick/untick karo, phir Save.
+        Role choose karo → checkboxes tick/untick → Save.
+        <strong>Delete</strong> by default sirf Admin pe ON hai.
+        Dusre role ko dena ho to section <em>“Delete (Admin default…)”</em> mein checkbox tick karo.
     </p>
 
     <?php if ($errors): ?>

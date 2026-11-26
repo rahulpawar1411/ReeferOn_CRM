@@ -1,4 +1,10 @@
 <?php
+/**
+ * Edit customer
+ *
+ * Update customer master details and Active / Inactive / On Hold status.
+ * Customer code itself cannot be changed.
+ */
 $pageTitle = 'Edit Customer';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -17,6 +23,7 @@ $user = current_user();
 $errors = [];
 $dupMatches = [];
 
+// Save customer edits on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = trim($_POST['customer_name'] ?? '');
     $brand_name = trim($_POST['brand_name'] ?? '');
@@ -99,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'status=' . $c['status'] . '; name=' . $c['customer_name'],
                 'status=' . $status . '; name=' . $customer_name
             );
-            flash('success', 'Customer updated.');
+            flash('success', 'Customer updated.', 'edit');
             redirect(base_url('modules/customers/view.php?id=' . $id));
         } catch (Throwable $e) {
             $errors[] = 'Could not save: ' . $e->getMessage();

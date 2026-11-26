@@ -1,23 +1,28 @@
 <?php
 /**
- * ReeferON CRM - Database Configuration
- * Update credentials if your WAMP MySQL password is different.
+ * ReeferON CRM – Database connection
+ *
+ * Change DB_HOST / DB_NAME / DB_USER / DB_PASS if your WAMP MySQL
+ * settings are different from the defaults below.
+ *
+ * Call db() anywhere to get one shared PDO connection.
  */
 
 define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'reeferon_crm');
 define('DB_USER', 'root');
-define('DB_PASS', ''); // WAMP default is empty
+define('DB_PASS', ''); // WAMP default password is empty
 define('DB_CHARSET', 'utf8mb4');
 
-/**
- * Temporary user until Authentication phase (Phase 7)
- */
+// Legacy constants (kept for older code). Real login uses Phase 7 auth.
 define('TEMP_USER_ID', 1);
 define('TEMP_USER_NAME', 'System User');
 
 date_default_timezone_set('Asia/Kolkata');
 
+/**
+ * Return one MySQL PDO connection (created once, then reused).
+ */
 function db(): PDO
 {
     static $pdo = null;

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Users list
+ *
+ * Employee logins with role and Active / Inactive status.
+ * Permission: users.manage
+ */
 $pageTitle = 'Users';
 $currentPage = 'users';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -44,7 +50,12 @@ require_once __DIR__ . '/../../includes/header.php';
                 <td><?= e($r['department']) ?></td>
                 <td><?= e($r['role_name'] ?: $r['role']) ?></td>
                 <td><span class="badge"><?= e($r['status']) ?></span></td>
-                <td><a href="<?= e(base_url('modules/users/edit.php?id=' . $r['id'])) ?>">Edit</a></td>
+                <td>
+                    <a href="<?= e(base_url('modules/users/edit.php?id=' . $r['id'])) ?>">Edit</a>
+                    <?php if (($r['status'] ?? '') !== 'Inactive' && (int) $r['id'] !== (int) current_user()['id']): ?>
+                        | <a class="link-danger" href="<?= e(base_url('modules/users/delete.php?id=' . $r['id'])) ?>">Delete</a>
+                    <?php endif; ?>
+                </td>
             </tr>
         <?php endforeach; ?>
         </tbody>

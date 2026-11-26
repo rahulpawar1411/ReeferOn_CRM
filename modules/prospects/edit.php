@@ -1,4 +1,9 @@
 <?php
+/**
+ * Edit prospect
+ *
+ * Update lead details, stage, and status. Stage changes go into history.
+ */
 $pageTitle = 'Edit Prospect';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -16,6 +21,7 @@ if (!$p) {
 $user = current_user();
 $errors = [];
 
+// Save prospect edits on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $company_name = trim($_POST['company_name'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
@@ -108,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             write_audit('prospects', $p['prospect_id'], 'UPDATE', $oldStage, $pipeline_stage);
 
             $pdo->commit();
-            flash('success', 'Prospect updated: ' . $p['prospect_id']);
+            flash('success', 'Prospect updated: ' . $p['prospect_id'], 'edit');
             redirect(base_url('modules/prospects/view.php?id=' . $id));
         } catch (Throwable $e) {
             if (db()->inTransaction()) {

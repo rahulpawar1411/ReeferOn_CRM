@@ -1,4 +1,9 @@
 <?php
+/**
+ * View onboarding
+ *
+ * Shows customer details, documents, and Admin approval status.
+ */
 $pageTitle = 'View Onboarding';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -71,6 +76,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Documents</h2>
+    <p class="step-note">After upload you can always come back here to <strong>View</strong> (open in browser) or <strong>Download</strong> the file.</p>
     <table class="data">
         <thead>
         <tr>
@@ -88,14 +94,26 @@ require_once __DIR__ . '/../../includes/header.php';
                 <td><span class="badge"><?= e($d['status']) ?></span></td>
                 <td>
                     <?php if (!empty($d['file_path'])): ?>
-                        <a href="<?= e(base_url('modules/onboarding/download.php?id=' . $d['id'])) ?>"><?= e($d['file_name']) ?></a>
+                        <?= e($d['file_name']) ?>
                     <?php else: ?>
                         -
                     <?php endif; ?>
                 </td>
                 <td><?= e($d['uploaded_by_name'] ?? '-') ?><?= !empty($d['updated_at']) ? ' / ' . e($d['updated_at']) : '' ?></td>
                 <td>
-                    <a href="<?= e(base_url('modules/onboarding/upload.php?id=' . $d['id'])) ?>">Upload / Update</a>
+                    <?php if (!empty($d['file_path'])): ?>
+                        <a href="<?= e(base_url('modules/onboarding/download.php?id=' . $d['id'])) ?>" target="_blank" rel="noopener">View</a>
+                        ·
+                        <a href="<?= e(base_url('modules/onboarding/download.php?id=' . $d['id'] . '&mode=download')) ?>">Download</a>
+                        ·
+                    <?php endif; ?>
+                    <?php if (can('onboarding.edit')): ?>
+                        <a href="<?= e(base_url('modules/onboarding/upload.php?id=' . $d['id'])) ?>">Upload / Update</a>
+                    <?php endif; ?>
+                    <?php if (can('onboarding.delete_docs') && !empty($d['file_path']) && $o['overall_status'] !== 'Approved'): ?>
+                        ·
+                        <a class="link-danger" href="<?= e(base_url('modules/onboarding/delete_doc.php?id=' . $d['id'])) ?>">Delete</a>
+                    <?php endif; ?>
                 </td>
             </tr>
         <?php endforeach; ?>

@@ -1,8 +1,19 @@
-// ReeferON CRM – shared loader + lazy list loading
+/**
+ * ReeferON CRM – shared front-end helpers
+ *
+ * Loaded on every page (see includes/footer.php).
+ * Handles:
+ * - Full-page loading overlay
+ * - Lazy "Load more" tables
+ * - India +91 phone inputs (10 digits only)
+ * - Right-side Filters drawer
+ * - Dashboard Global Search live suggestions
+ */
 (function () {
   var loaderEl = null;
   var lazyBusy = false;
 
+  // --- Loading overlay ---
   function loader() {
     if (!loaderEl) {
       loaderEl = document.getElementById('app-loader');
@@ -32,6 +43,7 @@
   window.CRM.showLoader = showLoader;
   window.CRM.hideLoader = hideLoader;
 
+  // Ask "Are you sure?" when a link/button has data-confirm="..."
   function bindConfirm() {
     document.querySelectorAll('[data-confirm]').forEach(function (el) {
       el.addEventListener('click', function (e) {
@@ -43,6 +55,7 @@
     });
   }
 
+  // Show loader when user clicks a sidebar link or submits a normal form
   function bindNavLoader() {
     document.querySelectorAll('.sidebar nav a, a.brand').forEach(function (a) {
       a.addEventListener('click', function (e) {
@@ -62,6 +75,7 @@
     });
   }
 
+  // --- Lazy tables (Load more / infinite scroll) ---
   function updatePager(pager, data) {
     pager.dataset.page = String(data.page);
     pager.dataset.pages = String(data.pages);
@@ -158,6 +172,7 @@
     });
   }
 
+  // --- Phone fields: force exactly 10 digits (ignore +91 / leading 0) ---
   function bindPhoneInputs() {
     document.querySelectorAll('input.js-phone-10').forEach(function (input) {
       input.setAttribute('maxlength', '10');
@@ -189,6 +204,7 @@
     });
   }
 
+  // --- Filters drawer (slides in from the right) ---
   function openFilterFlip(id) {
     var panel = document.getElementById(id);
     if (!panel) return;
@@ -245,12 +261,345 @@
     });
   }
 
+  // --- Dashboard Global Search: suggestions while typing ---
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function bindGlobalSearchSuggest() {
+    var wrap = document.querySelector('.global-search-wrap');
+    if (!wrap) return;
+    var input = wrap.querySelector('.global-search-input');
+    var box = wrap.querySelector('.global-search-suggest');
+    var url = wrap.getAttribute('data-suggest-url');
+    if (!input || !box || !url) return;
+
+    var timer = null;
+    var seq = 0;
+    var active = -1;
+    var items = [];
+
+    function setExpanded(open) {
+      input.setAttribute('aria-expanded', open ? 'true' : 'false');
+      box.hidden = !open;
+    }
+
+    function hide() {
+      active = -1;
+      items = [];
+      box.innerHTML = '';
+      setExpanded(false);
+    }
+
+    function markActive(idx) {
+      active = idx;
+      var nodes = box.querySelectorAll('.gs-item');
+      nodes.forEach(function (n, i) {
+        n.classList.toggle('is-active', i === active);
+      });
+    }
+
+    function render(list, q, moreUrl) {
+      items = list || [];
+      active = -1;
+      if (!q || q.length < 2) {
+        hide();
+        return;
+      }
+      if (!items.length) {
+        box.innerHTML = '<div class="gs-empty">No matches for “' + escapeHtml(q) + '”</div>';
+        setExpanded(true);
+        return;
+      }
+      var html = items
+        .map(function (it, i) {
+          return (
+            '<a class="gs-item" role="option" href="' +
+            escapeHtml(it.url) +
+            '" data-idx="' +
+            i +
+            '">' +
+            '<div class="gs-item-top">' +
+            '<span class="gs-type">' +
+            escapeHtml(it.type) +
+            '</span>' +
+            '<span class="gs-label">' +
+            escapeHtml(it.label) +
+            '</span>' +
+            '</div>' +
+            (it.sub
+              ? '<div class="gs-sub">' + escapeHtml(it.sub) + '</div>'
+              : '') +
+            '</a>'
+          );
+        })
+        .join('');
+      if (moreUrl) {
+        html +=
+          '<div class="gs-footer"><a href="' +
+          escapeHtml(moreUrl) +
+          '">See all results →</a></div>';
+      }
+      box.innerHTML = html;
+      setExpanded(true);
+    }
+
+    function fetchSuggest(q) {
+      var my = ++seq;
+      fetch(url + '?q=' + encodeURIComponent(q), {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('fail');
+          return res.json();
+        })
+        .then(function (data) {
+          if (my !== seq) return;
+          if (!data || !data.ok) {
+            hide();
+            return;
+          }
+          render(data.items || [], data.q || q, data.more_url || '');
+        })
+        .catch(function () {
+          if (my === seq) hide();
+        });
+    }
+
+    input.addEventListener('input', function () {
+      var q = (input.value || '').trim();
+      if (timer) clearTimeout(timer);
+      if (q.length < 2) {
+        hide();
+        return;
+      }
+      timer = setTimeout(function () {
+        fetchSuggest(q);
+      }, 180);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (box.hidden) return;
+      var nodes = box.querySelectorAll('.gs-item');
+      if (!nodes.length) {
+        if (e.key === 'Escape') hide();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        markActive(active < nodes.length - 1 ? active + 1 : 0);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        markActive(active > 0 ? active - 1 : nodes.length - 1);
+      } else if (e.key === 'Enter' && active >= 0 && nodes[active]) {
+        e.preventDefault();
+        showLoader('Opening…');
+        window.location.href = nodes[active].getAttribute('href');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hide();
+      }
+    });
+
+    box.addEventListener('mousedown', function (e) {
+      var a = e.target.closest('.gs-item');
+      if (a) {
+        e.preventDefault();
+        showLoader('Opening…');
+        window.location.href = a.getAttribute('href');
+      }
+    });
+
+    input.addEventListener('blur', function () {
+      setTimeout(hide, 140);
+    });
+
+    input.addEventListener('focus', function () {
+      var q = (input.value || '').trim();
+      if (q.length >= 2) fetchSuggest(q);
+    });
+  }
+
+  // --- Top-right toast (5s) with Undo acknowledgement for create/edit/delete ---
+  function toastTitles(action) {
+    if (action === 'create') return 'Created';
+    if (action === 'edit') return 'Updated';
+    if (action === 'delete') return 'Deleted';
+    return 'Saved';
+  }
+
+  function showToast(opts) {
+    var host = document.getElementById('toast-host');
+    if (!host) return;
+
+    var action = (opts && opts.action) || '';
+    var message = (opts && opts.message) || '';
+    var showUndo = action === 'create' || action === 'edit' || action === 'delete';
+
+    var el = document.createElement('div');
+    el.className = 'toast' + (action ? ' toast-action-' + action : '');
+    el.innerHTML =
+      '<div class="toast-body">' +
+      '<div class="toast-icon">' + (action === 'delete' ? '!' : '✓') + '</div>' +
+      '<div class="toast-text">' +
+      '<p class="toast-title">' + escapeHtml(toastTitles(action)) + '</p>' +
+      '<p class="toast-msg">' + escapeHtml(message) + '</p>' +
+      '</div>' +
+      '<div class="toast-actions">' +
+      (showUndo ? '<button type="button" class="toast-undo" data-toast-undo>Undo</button>' : '') +
+      '<button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>' +
+      '</div>' +
+      '</div>' +
+      '<div class="toast-timer"><span></span></div>';
+
+    host.appendChild(el);
+
+    var closed = false;
+    function closeToast(ack) {
+      if (closed) return;
+      closed = true;
+      if (ack) {
+        var msg = el.querySelector('.toast-msg');
+        var title = el.querySelector('.toast-title');
+        if (title) title.textContent = 'Acknowledged';
+        if (msg) msg.textContent = 'Noted. No further action.';
+        var undo = el.querySelector('[data-toast-undo]');
+        if (undo) undo.remove();
+        setTimeout(function () {
+          el.classList.add('is-leaving');
+          setTimeout(function () {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          }, 180);
+        }, 700);
+        return;
+      }
+      el.classList.add('is-leaving');
+      setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 180);
+    }
+
+    var timer = setTimeout(function () {
+      closeToast(false);
+    }, 5000);
+
+    el.querySelector('[data-toast-close]').addEventListener('click', function () {
+      clearTimeout(timer);
+      closeToast(false);
+    });
+    var undoBtn = el.querySelector('[data-toast-undo]');
+    if (undoBtn) {
+      undoBtn.addEventListener('click', function () {
+        clearTimeout(timer);
+        // Acknowledgement only — does not reverse create/edit/delete in DB
+        closeToast(true);
+      });
+    }
+  }
+
+  function bindToasts() {
+    var host = document.getElementById('toast-host');
+    if (!host) return;
+    var raw = host.getAttribute('data-flash');
+    if (!raw || raw === 'null' || raw === '') return;
+    try {
+      var data = JSON.parse(raw);
+      if (data && data.message) {
+        showToast(data);
+      }
+    } catch (e) {
+      // ignore bad payload
+    }
+    host.removeAttribute('data-flash');
+  }
+
+  window.CRM = window.CRM || {};
+  window.CRM.showToast = showToast;
+
+  // --- Delete popup: must type "delete" to enable the Delete button ---
+  function bindDeleteConfirm() {
+    var modal = document.querySelector('.js-delete-modal');
+    if (!modal) return;
+
+    document.body.classList.add('delete-modal-open');
+
+    function closeDeleteModal() {
+      var url = modal.getAttribute('data-cancel-url') || '';
+      document.body.classList.remove('delete-modal-open');
+      if (url) {
+        window.location.href = url;
+      } else if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        modal.remove();
+      }
+    }
+
+    // Close when clicking outside the white popup (on dark backdrop)
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) {
+        closeDeleteModal();
+      }
+    });
+
+    // Close icon (×) and Cancel
+    modal.querySelectorAll('.js-delete-modal-close').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        // Let real Cancel links navigate normally; buttons / × use JS close
+        if (el.tagName === 'A' && el.getAttribute('href')) {
+          return;
+        }
+        e.preventDefault();
+        closeDeleteModal();
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeDeleteModal();
+      }
+    });
+
+    document.querySelectorAll('.js-delete-confirm-form').forEach(function (form) {
+      var input = form.querySelector('.js-delete-confirm-input');
+      var btn = form.querySelector('.js-delete-confirm-btn');
+      if (!input || !btn) return;
+
+      function sync() {
+        var ok = (input.value || '').trim().toLowerCase() === 'delete';
+        btn.disabled = !ok;
+      }
+
+      input.addEventListener('input', sync);
+      input.addEventListener('keyup', sync);
+      sync();
+
+      form.addEventListener('submit', function (e) {
+        if ((input.value || '').trim().toLowerCase() !== 'delete') {
+          e.preventDefault();
+          input.focus();
+          return;
+        }
+        showLoader('Deleting…');
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     bindConfirm();
     bindNavLoader();
     bindLazyTables();
     bindPhoneInputs();
     bindFilterFlip();
+    bindGlobalSearchSuggest();
+    bindDeleteConfirm();
+    bindToasts();
   });
 
   window.addEventListener('pageshow', function (e) {

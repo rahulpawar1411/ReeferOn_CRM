@@ -1,4 +1,10 @@
 <?php
+/**
+ * Edit / create user
+ *
+ * Set employee login details, password, department, and role.
+ * Permission: users.manage
+ */
 $pageTitle = 'Edit User';
 $currentPage = 'users';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -31,6 +37,7 @@ $form = [
     'status' => $userRow['status'] ?? 'Active',
 ];
 
+// Save user details (and optional new password)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($form as $k => $_) {
         if (isset($_POST[$k])) {
@@ -108,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
                 write_audit('users', $form['user_id'], 'UPDATE', null, 'User updated / role=' . $role['name']);
-                flash('success', 'User updated.');
+                flash('success', 'User updated.', 'edit');
             } else {
                 $ins = db()->prepare(
                     'INSERT INTO users (employee_id, employee_name, email, mobile, user_id, password_hash, department, role, role_id, status)
@@ -121,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $form['department'], $legacyRole, (int) $form['role_id'], $form['status'],
                 ]);
                 write_audit('users', $form['user_id'], 'CREATE', null, 'User created / role=' . $role['name']);
-                flash('success', 'User created.');
+                flash('success', 'User created.', 'create');
             }
             redirect(base_url('modules/users/index.php'));
         } catch (Throwable $e) {

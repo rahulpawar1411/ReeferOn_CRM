@@ -1,4 +1,10 @@
 <?php
+/**
+ * Audit logs
+ *
+ * Who changed what, with filters and optional CSV export.
+ * Permission: logs.view
+ */
 $pageTitle = 'Logs';
 $currentPage = 'logs';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -11,6 +17,7 @@ $from = trim($_GET['from'] ?? '');
 $to = trim($_GET['to'] ?? '');
 $export = isset($_GET['export']) && $_GET['export'] === '1';
 
+// Build log filters from GET params
 $where = ' WHERE 1=1';
 $params = [];
 

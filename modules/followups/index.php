@@ -1,4 +1,9 @@
 <?php
+/**
+ * Follow-ups list
+ *
+ * Tabs for today / upcoming / overdue / completed call & meeting tasks.
+ */
 $pageTitle = 'Follow-ups';
 $currentPage = 'followups';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -11,6 +16,7 @@ if (!in_array($tab, $allowedTabs, true)) {
 
 $today = date('Y-m-d');
 
+// Filter rows by selected tab
 switch ($tab) {
     case 'today':
         $where = " WHERE status = 'Open' AND followup_date = ?";

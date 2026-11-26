@@ -1,7 +1,10 @@
 <?php
 /**
- * One-time setup: creates database + tables.
- * Open after starting WAMP: http://localhost/CRM/setup_install.php
+ * One-time install
+ *
+ * Creates the MySQL database and tables from sql/schema.sql.
+ * Open once after WAMP is green: http://localhost/CRM/setup_install.php
+ * Safe to delete this file after a successful install.
  */
 
 $host = '127.0.0.1';

@@ -1,4 +1,9 @@
 <?php
+/**
+ * Change pipeline stage
+ *
+ * Moves a lead to a new sales stage and saves remarks + history.
+ */
 $pageTitle = 'Update Pipeline Stage';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -15,6 +20,7 @@ if (!$p) {
 
 $errors = [];
 
+// Save stage change on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $toStage = $_POST['pipeline_stage'] ?? '';
     $remarks = trim($_POST['remarks'] ?? '');

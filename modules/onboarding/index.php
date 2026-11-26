@@ -1,11 +1,19 @@
 <?php
+/**
+ * Onboarding list
+ *
+ * Shows customer onboarding records with search + status filter + Excel export.
+ */
 $pageTitle = 'Customer Onboarding';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('onboarding.view');
 
 $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
+$export = isset($_GET['export']) && $_GET['export'] === '1';
 
+// Build list filters from GET params
 $where = ' WHERE 1=1';
 $params = [];
 
@@ -17,6 +25,37 @@ if ($q !== '') {
 if ($status !== '' && in_array($status, onboarding_statuses(), true)) {
     $where .= ' AND overall_status = ?';
     $params[] = $status;
+}
+
+// Excel export (current filters, max 5000 rows)
+if ($export) {
+    $stmt = db()->prepare('SELECT * FROM onboarding' . $where . ' ORDER BY id DESC LIMIT 5000');
+    $stmt->execute($params);
+    $exportRows = $stmt->fetchAll();
+    $headers = [
+        'Onboarding ID', 'Prospect ID', 'Customer', 'Contact', 'Phone', 'Email',
+        'GSTIN', 'PAN', 'Service', 'Temperature', 'Status', 'Payment Terms', 'Credit Limit', 'Created',
+    ];
+    $out = [];
+    foreach ($exportRows as $r) {
+        $out[] = [
+            $r['onboarding_id'],
+            $r['prospect_id'],
+            $r['customer_name'],
+            $r['contact_person'],
+            $r['mobile'],
+            $r['email'] ?? '',
+            $r['gstin'] ?? '',
+            $r['pan'] ?? '',
+            $r['service_required'] ?? '',
+            $r['temperature_requirement'] ?? '',
+            $r['overall_status'],
+            $r['payment_terms'] ?? '',
+            $r['credit_limit'] ?? '',
+            $r['created_at'] ?? '',
+        ];
+    }
+    export_csv('reeferon_onboarding_' . date('Ymd_His') . '.csv', $headers, $out);
 }
 
 [$rows, $pg] = paginate_sql(
@@ -64,7 +103,13 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <?php
     $filterActive = ($q !== '' || $status !== '');
-    filter_flip_start('Onboarding Filters', $filterActive, base_url('modules/onboarding/index.php'));
+    $excelUrl = base_url('modules/onboarding/index.php') . '?' . http_build_query(array_filter([
+        'q' => $q,
+        'status' => $status,
+        'export' => '1',
+    ], static fn($v) => $v !== '' && $v !== null));
+    $leading = '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
+    filter_flip_start('Onboarding Filters', $filterActive, base_url('modules/onboarding/index.php'), $leading);
     ?>
     <form class="filter-flip-form" method="get" action="">
         <div class="field">

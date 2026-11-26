@@ -1,4 +1,10 @@
 <?php
+/**
+ * Approvals list
+ *
+ * Admin queue of pending / done onboarding approvals.
+ * Permission: approvals.view
+ */
 $pageTitle = 'Approvals';
 $currentPage = 'approvals';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -9,6 +15,7 @@ if (!in_array($tab, ['pending', 'done', 'all'], true)) {
     $tab = 'pending';
 }
 
+// Filter approvals by selected tab
 $from = " FROM onboarding_approvals a
         JOIN onboarding o ON o.id = a.onboarding_pk
         WHERE a.department = 'Admin'";

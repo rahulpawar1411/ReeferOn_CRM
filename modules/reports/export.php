@@ -1,4 +1,9 @@
 <?php
+/**
+ * Export report CSV
+ *
+ * Downloads the selected report as an Excel-friendly CSV file.
+ */
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/_data.php';
 
@@ -8,6 +13,7 @@ if (!in_array($type, report_types(), true)) {
     redirect(base_url('modules/reports/index.php'));
 }
 
+// Build dataset and stream CSV download
 try {
     [$headers, $rows, $title] = report_dataset($type);
     $safe = preg_replace('/[^a-z0-9_\-]+/i', '_', strtolower($type));

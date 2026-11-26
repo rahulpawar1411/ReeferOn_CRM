@@ -1,4 +1,9 @@
 <?php
+/**
+ * Upload onboarding document
+ *
+ * Attach a file (PDF/image) or mark a document as Not Applicable.
+ */
 $pageTitle = 'Upload Document';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -23,6 +28,7 @@ $errors = [];
 $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
 $maxBytes = 5 * 1024 * 1024; // 5 MB
 
+// Save document file / status on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? 'Received';
     $remarks = trim($_POST['remarks'] ?? '');
@@ -109,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $d['onboarding_id']
                 );
             }
-            flash('success', $d['doc_type'] . ' updated.');
+            flash('success', $d['doc_type'] . ' updated.', 'edit');
             redirect(base_url('modules/onboarding/view.php?id=' . $d['onboarding_pk']));
         } catch (Throwable $e) {
             $errors[] = 'Could not save: ' . $e->getMessage();
@@ -125,6 +131,15 @@ require_once __DIR__ . '/../../includes/header.php';
     <h2>Document: <?= e($d['doc_type']) ?></h2>
     <p class="step-note"><strong>Step 3b – Documents:</strong> Upload GST, PAN, KYC, Agreement, etc. (PDF/JPG, max 5 MB). If rejected, upload a replacement file here.</p>
     <p>Onboarding <strong><?= e($d['onboarding_id']) ?></strong> | Current status: <span class="badge"><?= e($d['status']) ?></span></p>
+    <?php if (!empty($d['file_path'])): ?>
+        <p>
+            Current file: <strong><?= e($d['file_name'] ?? 'file') ?></strong>
+            —
+            <a href="<?= e(base_url('modules/onboarding/download.php?id=' . (int) $d['id'])) ?>" target="_blank" rel="noopener">View</a>
+            ·
+            <a href="<?= e(base_url('modules/onboarding/download.php?id=' . (int) $d['id'] . '&mode=download')) ?>">Download</a>
+        </p>
+    <?php endif; ?>
 
     <?php if ($errors): ?>
         <div class="alert alert-error">

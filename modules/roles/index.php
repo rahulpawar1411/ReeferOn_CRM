@@ -1,4 +1,10 @@
 <?php
+/**
+ * Roles list
+ *
+ * Shows each role and how many permissions are allowed.
+ * Permission: roles.manage
+ */
 $pageTitle = 'Roles';
 $currentPage = 'roles';
 require_once __DIR__ . '/../../includes/functions.php';

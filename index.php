@@ -1,8 +1,18 @@
 <?php
+/**
+ * Dashboard (home page after login)
+ *
+ * Shows:
+ * - Global Search (with live suggestions while typing)
+ * - Management Summary counts (click a count to open that list)
+ * - Salesperson-wise active leads
+ * - Recently created customers
+ */
 $pageTitle = 'Dashboard';
 $currentPage = 'dashboard';
 require_once __DIR__ . '/includes/functions.php';
 
+// Live counts for the Management Summary cards
 $counts = [
     'total' => 0,
     'new' => 0,
@@ -17,12 +27,13 @@ $counts = [
 ];
 $bySales = [];
 $recentCustomers = [];
-$recentActivity = [];
 $searchQ = trim($_GET['q'] ?? '');
 $searchResults = null;
 
 try {
     $pdo = db();
+
+    // --- Count cards ---
     $counts['total'] = (int) $pdo->query("SELECT COUNT(*) FROM prospects WHERE status = 'Active'")->fetchColumn();
     $counts['new'] = (int) $pdo->query("SELECT COUNT(*) FROM prospects WHERE pipeline_stage = 'New Prospect' AND status = 'Active'")->fetchColumn();
     $counts['active_pipeline'] = (int) $pdo->query(
@@ -51,26 +62,24 @@ try {
            AND o.overall_status IN ('Submitted','In Approval')"
     )->fetchColumn();
 
+    // Top salespeople by active prospect count
     $bySales = $pdo->query(
         "SELECT salesperson_name, COUNT(*) AS cnt
          FROM prospects WHERE status = 'Active'
          GROUP BY salesperson_name ORDER BY cnt DESC LIMIT 10"
     )->fetchAll();
 
+    // Latest customers for the bottom table
     $recentCustomers = $pdo->query(
         'SELECT id, customer_code, customer_name, status, created_at FROM customers ORDER BY id DESC LIMIT 8'
     )->fetchAll();
 
-    $recentActivity = $pdo->query(
-        'SELECT module, record_id, action, old_value, new_value, performed_by_name, created_at
-         FROM audit_logs ORDER BY id DESC LIMIT 12'
-    )->fetchAll();
-
+    // Full search results after clicking Search (suggestions use a separate API)
     if ($searchQ !== '') {
         $searchResults = global_search($searchQ, 15);
     }
 } catch (Throwable $e) {
-    // Schema may not be imported yet
+    // DB/schema may not be ready yet — show empty dashboard instead of crashing
 }
 
 require_once __DIR__ . '/includes/header.php';
@@ -78,15 +87,23 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="card">
     <h2>Global Search</h2>
-    <form class="toolbar" method="get" action="">
-        <div class="field" style="min-width:280px;flex:1">
-            <label>Prospect ID / Customer Code / Name / Mobile / GSTIN</label>
-            <input type="text" name="q" value="<?= e($searchQ) ?>" placeholder="Search…">
+    <p class="step-note">Search by Prospect ID, Customer Code, company/customer name, phone, or GSTIN.</p>
+    <form class="global-search-form js-no-loader" method="get" action="<?= e(base_url('index.php')) ?>" autocomplete="off">
+        <div class="global-search-row">
+            <div class="global-search-wrap" data-suggest-url="<?= e(base_url('api/search_suggest.php')) ?>">
+                <input type="text" name="q" id="global-search-input" class="global-search-input"
+                       value="<?= e($searchQ) ?>"
+                       placeholder="e.g. REO-LEAD-0001, company name, phone, GSTIN…"
+                       autocomplete="off" autofocus
+                       role="combobox" aria-autocomplete="list" aria-expanded="false"
+                       aria-controls="global-search-suggest">
+                <div id="global-search-suggest" class="global-search-suggest" role="listbox" hidden></div>
+            </div>
+            <button type="submit" class="btn">Search</button>
+            <?php if ($searchQ !== ''): ?>
+                <a class="btn btn-secondary" href="<?= e(base_url('index.php')) ?>">Clear</a>
+            <?php endif; ?>
         </div>
-        <button type="submit" class="btn">Search</button>
-        <?php if ($searchQ !== ''): ?>
-            <a class="btn btn-secondary" href="<?= e(base_url('index.php')) ?>">Clear</a>
-        <?php endif; ?>
     </form>
 </div>
 
@@ -151,28 +168,47 @@ require_once __DIR__ . '/includes/header.php';
     <h2>Management Summary</h2>
     <p class="step-note"><strong>Live counts</strong> from MySQL. Flow: Prospect → Commercial Approved → Onboarding → Admin Approval → Customer Code → Customer Master.</p>
     <div class="stat-grid">
-        <div class="stat"><div class="stat-n"><?= (int) $counts['total'] ?></div><div class="stat-l">Total Prospects</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['new'] ?></div><div class="stat-l">New Leads</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['active_pipeline'] ?></div><div class="stat-l">Active Pipeline</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['commercial_approved'] ?></div><div class="stat-l">Commercial Approved</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['onboarding_pending'] ?></div><div class="stat-l">Onboarding Pending</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['pending_approvals'] ?></div><div class="stat-l">Pending Admin Approvals</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['active_customers'] ?></div><div class="stat-l">Active Customers</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['lost'] ?></div><div class="stat-l">Lost Leads</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['fu_today'] ?></div><div class="stat-l">Follow-ups Today</div></div>
-        <div class="stat"><div class="stat-n"><?= (int) $counts['fu_overdue'] ?></div><div class="stat-l">Overdue Follow-ups</div></div>
+        <a class="stat" href="<?= e(base_url('modules/prospects/index.php')) ?>">
+            <div class="stat-n"><?= (int) $counts['total'] ?></div>
+            <div class="stat-l">Total Prospects</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/prospects/index.php?stage=' . rawurlencode('New Prospect'))) ?>">
+            <div class="stat-n"><?= (int) $counts['new'] ?></div>
+            <div class="stat-l">New Leads</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/prospects/index.php')) ?>">
+            <div class="stat-n"><?= (int) $counts['active_pipeline'] ?></div>
+            <div class="stat-l">Active Pipeline</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/prospects/index.php?stage=' . rawurlencode('Commercial Approved'))) ?>">
+            <div class="stat-n"><?= (int) $counts['commercial_approved'] ?></div>
+            <div class="stat-l">Commercial Approved</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/onboarding/index.php')) ?>">
+            <div class="stat-n"><?= (int) $counts['onboarding_pending'] ?></div>
+            <div class="stat-l">Onboarding Pending</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/approvals/index.php?tab=pending')) ?>">
+            <div class="stat-n"><?= (int) $counts['pending_approvals'] ?></div>
+            <div class="stat-l">Pending Admin Approvals</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/customers/index.php?status=Active')) ?>">
+            <div class="stat-n"><?= (int) $counts['active_customers'] ?></div>
+            <div class="stat-l">Active Customers</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/prospects/index.php?stage=Lost')) ?>">
+            <div class="stat-n"><?= (int) $counts['lost'] ?></div>
+            <div class="stat-l">Lost Leads</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/followups/index.php?tab=today')) ?>">
+            <div class="stat-n"><?= (int) $counts['fu_today'] ?></div>
+            <div class="stat-l">Follow-ups Today</div>
+        </a>
+        <a class="stat" href="<?= e(base_url('modules/followups/index.php?tab=overdue')) ?>">
+            <div class="stat-n"><?= (int) $counts['fu_overdue'] ?></div>
+            <div class="stat-l">Overdue Follow-ups</div>
+        </a>
     </div>
-</div>
-
-<div class="card">
-    <h2>Actions</h2>
-    <a class="btn" href="<?= e(base_url('modules/prospects/create.php')) ?>">Create New Prospect</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/followups/index.php')) ?>">Follow-ups</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/approvals/index.php')) ?>">Approvals</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/reports/index.php')) ?>">Reports</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/notifications/index.php')) ?>">Notifications</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Customers</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/help/index.php')) ?>">Help – How it works</a>
 </div>
 
 <div class="card">
@@ -206,28 +242,6 @@ require_once __DIR__ . '/includes/header.php';
                     <td><span class="badge"><?= e($r['status']) ?></span></td>
                     <td><?= e($r['created_at']) ?></td>
                     <td><a href="<?= e(base_url('modules/customers/view.php?id=' . $r['id'])) ?>">Open</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
-</div>
-
-<div class="card">
-    <h2>Recent Activity</h2>
-    <p><a href="<?= e(base_url('modules/logs/index.php')) ?>">View full Logs</a></p>
-    <?php if (!$recentActivity): ?>
-        <div class="empty">No activity yet.</div>
-    <?php else: ?>
-        <table class="data">
-            <tr><th>When</th><th>Module</th><th>Record</th><th>Action</th><th>Change</th><th>By</th></tr>
-            <?php foreach ($recentActivity as $r): ?>
-                <tr>
-                    <td><?= e($r['created_at']) ?></td>
-                    <td><?= e($r['module']) ?></td>
-                    <td><?= e($r['record_id']) ?></td>
-                    <td><?= e($r['action']) ?></td>
-                    <td><?= e(($r['old_value'] ?? '-') . ' → ' . ($r['new_value'] ?? '-')) ?></td>
-                    <td><?= e($r['performed_by_name']) ?></td>
                 </tr>
             <?php endforeach; ?>
         </table>

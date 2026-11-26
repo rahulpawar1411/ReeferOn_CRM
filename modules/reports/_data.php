@@ -1,11 +1,15 @@
 <?php
 /**
- * Shared report query builder. Returns [headers, rows, title].
+ * Report data helpers
+ *
+ * Shared SQL for each report type. Returns [headers, rows, title].
+ * Used by view.php and export.php.
  */
 function report_dataset(string $type): array
 {
     $pdo = db();
 
+    // Pick the SQL + column headers for this report type
     switch ($type) {
         case 'prospects':
             $rows = $pdo->query(

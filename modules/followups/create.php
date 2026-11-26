@@ -1,4 +1,9 @@
 <?php
+/**
+ * Add follow-up
+ *
+ * Log a call/meeting against a prospect and optional next follow-up date.
+ */
 $pageTitle = 'Add Follow-up';
 $currentPage = 'followups';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -22,6 +27,7 @@ foreach ($prospects as $row) {
     }
 }
 
+// Save follow-up on form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $prospectPk = (int) ($_POST['prospect_pk'] ?? 0);
     $followup_date = trim($_POST['followup_date'] ?? '');

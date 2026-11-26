@@ -1,4 +1,9 @@
 <?php
+/**
+ * View report
+ *
+ * Shows one report table on screen (live MySQL data).
+ */
 $pageTitle = 'Report';
 $currentPage = 'reports';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -10,6 +15,7 @@ if (!in_array($type, report_types(), true)) {
     redirect(base_url('modules/reports/index.php'));
 }
 
+// Load headers + rows for the selected report type
 try {
     [$headers, $rows, $title] = report_dataset($type);
 } catch (Throwable $e) {

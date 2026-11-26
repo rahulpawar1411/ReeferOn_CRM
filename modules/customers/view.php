@@ -1,4 +1,9 @@
 <?php
+/**
+ * View customer
+ *
+ * Read-only Customer Master record with links to onboarding / prospect.
+ */
 $pageTitle = 'View Customer';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -18,7 +23,12 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
-    <a class="btn" href="<?= e(base_url('modules/customers/edit.php?id=' . $c['id'])) ?>">Edit</a>
+    <?php if (can('customers.edit')): ?>
+        <a class="btn" href="<?= e(base_url('modules/customers/edit.php?id=' . $c['id'])) ?>">Edit</a>
+    <?php endif; ?>
+    <?php if (can('customers.delete') && $c['status'] !== 'Inactive'): ?>
+        <a class="btn btn-danger" href="<?= e(base_url('modules/customers/delete.php?id=' . $c['id'])) ?>">Delete</a>
+    <?php endif; ?>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Back to List</a>
     <?php if (!empty($c['onboarding_pk'])): ?>
         <a class="btn btn-secondary" href="<?= e(base_url('modules/onboarding/view.php?id=' . $c['onboarding_pk'])) ?>">Open Onboarding</a>

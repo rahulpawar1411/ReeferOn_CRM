@@ -1,4 +1,9 @@
 <?php
+/**
+ * View prospect
+ *
+ * Read-only lead summary with stage history, follow-ups, and onboarding links.
+ */
 $pageTitle = 'View Prospect';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -39,13 +44,22 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
-    <a class="btn" href="<?= e(base_url('modules/prospects/edit.php?id=' . $p['id'])) ?>">Edit</a>
-    <a class="btn" href="<?= e(base_url('modules/prospects/stage.php?id=' . $p['id'])) ?>">Change Stage</a>
-    <a class="btn" href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add Follow-up</a>
+    <?php if (can('prospects.edit')): ?>
+        <a class="btn" href="<?= e(base_url('modules/prospects/edit.php?id=' . $p['id'])) ?>">Edit</a>
+    <?php endif; ?>
+    <?php if (can('prospects.stage')): ?>
+        <a class="btn" href="<?= e(base_url('modules/prospects/stage.php?id=' . $p['id'])) ?>">Change Stage</a>
+    <?php endif; ?>
+    <?php if (can('followups.create')): ?>
+        <a class="btn" href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add Follow-up</a>
+    <?php endif; ?>
     <?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb): ?>
         <a class="btn" href="<?= e(base_url('modules/onboarding/initiate.php?prospect_id=' . $p['id'])) ?>">Initiate Customer Onboarding</a>
     <?php elseif ($onb): ?>
         <a class="btn" href="<?= e(base_url('modules/onboarding/view.php?id=' . $onb['id'])) ?>">Open Onboarding (<?= e($onb['onboarding_id']) ?>)</a>
+    <?php endif; ?>
+    <?php if (can('prospects.delete') && $p['status'] !== 'Inactive'): ?>
+        <a class="btn btn-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $p['id'])) ?>">Delete</a>
     <?php endif; ?>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Back to List</a>
 </div>

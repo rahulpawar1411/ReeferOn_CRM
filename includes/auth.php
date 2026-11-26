@@ -1,14 +1,26 @@
 <?php
 /**
- * Phase 7 – Login, roles, checkbox permissions.
+ * ReeferON CRM – Login, roles, and permissions
+ *
+ * How access works (simple):
+ * 1) User logs in → we save their user id in the PHP session.
+ * 2) Each user has a Role (Admin, Salesperson, Management, Viewer…).
+ * 3) Each role has checkbox permissions stored as JSON.
+ * 4) Pages call require_login() and/or require_perm('something').
+ *
+ * Useful functions:
+ * - login_user() / logout_user()
+ * - can('permission.key') / require_perm('permission.key')
+ * - role_default_checks() = default checkboxes for a role type
  */
 require_once __DIR__ . '/../config/database.php';
 
+// Start session once so login state is available on every page
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-/** All permission keys shown as checkboxes */
+/** Full list of permission keys shown as checkboxes on the Role edit screen. */
 function permission_catalog(): array
 {
     return [
@@ -17,25 +29,30 @@ function permission_catalog(): array
         'prospects.create' => 'Prospects – Create',
         'prospects.edit' => 'Prospects – Edit',
         'prospects.stage' => 'Prospects – Change stage',
+        // Delete = soft Inactive only. Default ON for Admin; grant to others via checkbox.
+        'prospects.delete' => 'Delete Prospects (soft Inactive) – Admin default',
         'followups.view' => 'Follow-ups – View',
         'followups.create' => 'Follow-ups – Create / Complete',
         'onboarding.view' => 'Onboarding – View',
         'onboarding.edit' => 'Onboarding – Edit / Documents / Submit',
+        'onboarding.delete_docs' => 'Delete Document files – Admin default',
         'approvals.view' => 'Approvals – View',
         'approvals.decide' => 'Approvals – Approve / Reject',
         'customers.view' => 'Customers – View',
         'customers.create' => 'Customers – Add existing',
         'customers.edit' => 'Customers – Edit',
+        'customers.delete' => 'Delete Customers (soft Inactive) – Admin default',
         'reports.view' => 'Reports – View',
         'reports.export' => 'Reports – Excel export',
         'notifications.view' => 'Notifications',
         'logs.view' => 'Logs – View / Export',
         'roles.manage' => 'Roles – Manage (checkboxes)',
-        'users.manage' => 'Users – Create / Edit / Activate',
+        'users.manage' => 'Users – Create / Edit / Soft delete – Admin default',
         'help.view' => 'Help',
     ];
 }
 
+/** Group permissions under headings for easier editing. */
 function permission_groups(): array
 {
     return [
@@ -43,6 +60,11 @@ function permission_groups(): array
         'Sales' => ['prospects.view', 'prospects.create', 'prospects.edit', 'prospects.stage', 'followups.view', 'followups.create'],
         'Onboarding' => ['onboarding.view', 'onboarding.edit'],
         'Account / Approvals' => ['approvals.view', 'approvals.decide', 'customers.view', 'customers.create', 'customers.edit'],
+        'Delete (Admin default – tick to give others access)' => [
+            'prospects.delete',
+            'customers.delete',
+            'onboarding.delete_docs',
+        ],
         'Reports & Alerts' => ['reports.view', 'reports.export', 'notifications.view', 'logs.view'],
         'Admin' => ['roles.manage', 'users.manage', 'help.view'],
     ];
@@ -112,6 +134,10 @@ function role_default_checks(string $key): array
     }
 }
 
+/**
+ * Make sure roles table exists, then seed default roles.
+ * Safe to call many times (runs once per request).
+ */
 function ensure_auth_schema(): void
 {
     static $done = false;
@@ -147,6 +173,7 @@ function ensure_auth_schema(): void
     }
 }
 
+/** Create / update the standard roles. Does not wipe custom checkbox edits. */
 function seed_default_roles(): void
 {
     $pdo = db();
@@ -207,6 +234,29 @@ function seed_default_roles(): void
         }
     }
 
+    // Newer permission keys (e.g. *.delete): grant to Admin / Super Admin if missing in saved JSON
+    $adminRows = $pdo->query(
+        "SELECT id, name, permissions_json FROM roles WHERE name IN ('Admin', 'Super Admin')"
+    )->fetchAll();
+    foreach ($adminRows as $ar) {
+        $raw = json_decode((string) ($ar['permissions_json'] ?? ''), true);
+        if (!is_array($raw)) {
+            $raw = [];
+        }
+        $perms = decode_permissions($ar['permissions_json'] ?? null);
+        $changed = false;
+        foreach (['prospects.delete', 'customers.delete', 'onboarding.delete_docs'] as $key) {
+            if (!array_key_exists($key, $raw)) {
+                $perms[$key] = true;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            $pdo->prepare('UPDATE roles SET permissions_json = ? WHERE id = ?')
+                ->execute([encode_permissions($perms), (int) $ar['id']]);
+        }
+    }
+
     // Link system user to Super Admin
     $roleId = (int) $pdo->query("SELECT id FROM roles WHERE name = 'Super Admin' LIMIT 1")->fetchColumn();
     if ($roleId) {
@@ -215,6 +265,7 @@ function seed_default_roles(): void
     }
 }
 
+/** Turn permissions JSON from DB into a true/false array. */
 function decode_permissions(?string $json): array
 {
     $all = array_fill_keys(array_keys(permission_catalog()), false);
@@ -233,6 +284,7 @@ function decode_permissions(?string $json): array
     return $all;
 }
 
+/** Turn a true/false permissions array into JSON for saving. */
 function encode_permissions(array $perms): string
 {
     $all = array_fill_keys(array_keys(permission_catalog()), false);
@@ -244,6 +296,7 @@ function encode_permissions(array $perms): string
     return json_encode($all);
 }
 
+/** Read checked boxes from the Role edit form (POST). */
 function permissions_from_post(array $post): array
 {
     $all = array_fill_keys(array_keys(permission_catalog()), false);
@@ -259,6 +312,7 @@ function permissions_from_post(array $post): array
     return $all;
 }
 
+/** Load the logged-in user from session + DB. Returns null if not logged in. */
 function auth_user(): ?array
 {
     if (empty($_SESSION['auth_user_id'])) {
@@ -289,6 +343,7 @@ function auth_user(): ?array
     }
 }
 
+/** Check login ID + password. On success, store user id in session. */
 function login_user(string $userId, string $password): array
 {
     ensure_auth_schema();
@@ -314,6 +369,7 @@ function login_user(string $userId, string $password): array
     return ['ok' => true, 'user' => $u];
 }
 
+/** Clear session and log the user out. */
 function logout_user(): void
 {
     $_SESSION = [];
@@ -324,6 +380,7 @@ function logout_user(): void
     session_destroy();
 }
 
+/** True if the current user has this permission checkbox. */
 function can(string $permission): bool
 {
     $u = current_user();
@@ -337,6 +394,7 @@ function can(string $permission): bool
     return false;
 }
 
+/** Stop guests — send them to the login page. */
 function require_login(): void
 {
     if (auth_user() === null) {
@@ -346,6 +404,7 @@ function require_login(): void
     }
 }
 
+/** Stop users who do not have this permission. */
 function require_perm(string $permission): void
 {
     require_login();
@@ -356,6 +415,7 @@ function require_perm(string $permission): void
     }
 }
 
+/** Print the permission checkbox groups on the Role edit page. */
 function render_permission_checkboxes(array $currentPerms): void
 {
     foreach (permission_groups() as $group => $keys) {

@@ -1,10 +1,21 @@
 <?php
+/**
+ * Shared page header + left menu
+ *
+ * Every module page includes this after setting:
+ *   $pageTitle   = browser tab title
+ *   $currentPage = which menu item is active
+ *
+ * It starts the HTML, shows the sidebar, and prints flash messages.
+ * Pair with includes/footer.php at the end of the page.
+ */
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 require_once __DIR__ . '/functions.php';
 
 ensure_auth_schema();
+// Most pages need login. Set $skipAuth = true before include to skip (rare).
 if (empty($skipAuth)) {
     require_login();
 }
@@ -117,6 +128,17 @@ $user = current_user();
             <h1><?= e($pageTitle) ?></h1>
         </header>
         <div class="content">
-            <?php if ($flash): ?>
-                <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
+            <?php
+            // Errors stay as page alerts. Success create/edit/delete → top-right toast (JS).
+            if ($flash && ($flash['type'] ?? '') === 'error'): ?>
+                <div class="alert alert-error"><?= e($flash['message']) ?></div>
+            <?php elseif ($flash && ($flash['type'] ?? '') === 'success' && empty($flash['action'])): ?>
+                <div class="alert alert-success"><?= e($flash['message']) ?></div>
             <?php endif; ?>
+
+            <div id="toast-host" class="toast-host" aria-live="polite" aria-atomic="true"
+                 data-flash="<?= e(json_encode($flash && ($flash['type'] ?? '') === 'success' && !empty($flash['action']) ? [
+                     'type' => $flash['type'],
+                     'message' => $flash['message'],
+                     'action' => $flash['action'],
+                 ] : null, JSON_UNESCAPED_UNICODE)) ?>"></div>
