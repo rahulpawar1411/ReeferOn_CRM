@@ -39,7 +39,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <dt>Brand Name</dt><dd><?= e($c['brand_name'] ?? '-') ?></dd>
         <dt>Business Type</dt><dd><?= e($c['business_type']) ?></dd>
         <dt>Contact Person</dt><dd><?= e($c['contact_person']) ?></dd>
-        <dt>Mobile</dt><dd><?= e($c['mobile']) ?></dd>
+        <dt>Phone</dt><dd><?= e($c['mobile']) ?></dd>
         <dt>Email</dt><dd><?= e($c['email'] ?? '-') ?></dd>
         <dt>GSTIN</dt><dd><?= e($c['gstin'] ?? '-') ?></dd>
         <dt>Registered Address</dt><dd><?= nl2br(e($c['registered_address'] ?? '-')) ?></dd>

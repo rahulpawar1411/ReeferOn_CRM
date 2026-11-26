@@ -2,6 +2,7 @@
 $pageTitle = 'Create Prospect';
 $currentPage = 'prospect_create';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('prospects.create');
 
 $user = current_user();
 $errors = [];
@@ -10,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $company_name = trim($_POST['company_name'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
     $designation = trim($_POST['designation'] ?? '');
-    $mobile = trim($_POST['mobile'] ?? '');
+    $mobile = phone_digits($_POST['mobile'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $business_type = $_POST['business_type'] ?? '';
     $industry = trim($_POST['industry'] ?? '');
@@ -25,7 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($company_name === '') $errors[] = 'Company Name is required.';
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
-    if ($mobile === '') $errors[] = 'Mobile Number is required.';
+    $phoneErr = phone_error($mobile, true);
+    if ($phoneErr) $errors[] = $phoneErr;
     if ($business_type === '') $errors[] = 'Business Type is required.';
     if ($service_required === '') $errors[] = 'Service Required is required.';
     if ($temperature_requirement === '') $errors[] = 'Temperature Requirement is required.';
@@ -159,8 +161,8 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="text" name="designation" value="<?= e($_POST['designation'] ?? '') ?>">
             </div>
             <div class="form-group">
-                <label>Mobile Number <span class="required">*</span></label>
-                <input type="text" name="mobile" required value="<?= e($_POST['mobile'] ?? '') ?>">
+                <label>Phone number <span class="required">*</span></label>
+                <?php render_phone_input('mobile', $_POST['mobile'] ?? '', true); ?>
             </div>
 
             <div class="form-group">

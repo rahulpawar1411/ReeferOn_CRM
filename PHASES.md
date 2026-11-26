@@ -19,7 +19,7 @@
 | 4 | Admin Approval + Customer Code | 21 Dec 2026 | DONE (direct Admin only) |
 | 5 | Existing Customer Master | 18–21 Dec 2026 | DONE (list/view/edit + direct add + dup check) |
 | 6 | Dashboard + Reports + Notifications | 28 Dec 2026 | DONE |
-| 7 | Authentication + Roles (LAST) | Before go-live | Pending |
+| 7 | Authentication + Roles (checkbox access) | Before go-live | DONE |
 | 8 | Testing + Training + Go-Live | 28 Dec 2026 – 1 Jan 2027 | Pending |
 
 ---
@@ -276,16 +276,16 @@ Sales login (later)
 
 ## What we build RIGHT NOW
 
-**Phase 0–6 done. Next = Phase 7 (Login + Roles + server-side access).**
+**Phase 0–7 done. Next = Phase 8 (Testing + Training + Go-Live).**
 
-Phase 6 delivered:
-1. Dashboard summary cards + salesperson-wise + recent customers/activity
-2. Global search (prospect / onboarding / customer)
-3. Reports module + CSV Excel export
-4. Notifications table + live alerts + history
-5. Activity / audit trail page
+Phase 7 delivered:
+1. Login / logout / session
+2. Roles with **checkbox permissions** + Admin / Salesperson / Management / Viewer defaults (customizable)
+3. Users management (assign role)
+4. Menu + server `require_perm` checks
+5. Demo logins: `system` / `sales` / `account`
 
-Authentication waits until login milestone / Phase 7.
+Authentication is live — temp-only browsing removed.
 
 ---
 

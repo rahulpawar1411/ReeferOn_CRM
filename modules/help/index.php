@@ -249,6 +249,8 @@ if (!in_array($step, $allowed, true)) {
         <tr><td><strong>Notifications</strong></td><td>Alerts: follow-up due, approval pending, code generated, etc.</td></tr>
         <tr><td><strong>Logs</strong></td><td>Full activity log — every create/update/stage/doc/approval/customer action (35 rows per page)</td></tr>
         <tr><td><strong>Help</strong></td><td>This guide</td></tr>
+        <tr><td><strong>Roles</strong></td><td>Checkbox access — Admin / Salesperson / Management / Viewer defaults (fully customizable)</td></tr>
+        <tr><td><strong>Users</strong></td><td>Employee logins + assign role</td></tr>
         <tr><td><strong>Health JSON</strong></td><td><code>health.php</code> — DB, tables, sequences, uploads status (JSON only)</td></tr>
         </tbody>
     </table>
@@ -427,7 +429,7 @@ if (!in_array($step, $allowed, true)) {
         <li>Customer code only after <strong>Admin Approve</strong></li>
         <li>Do not retype the same data — modules are connected</li>
         <li>List pages show <strong>25 rows</strong> first (Logs <strong>35</strong>), then <strong>lazy load</strong> more on scroll or <em>Load more</em> — same Loading… UI everywhere</li>
-        <li>Login is not enabled yet — everyone uses <strong>System User</strong>; roles come later</li>
+        <li>Login is required — Roles use <strong>checkbox access</strong> (Admin / Salesperson / Management / Viewer defaults under Roles menu)</li>
     </ul>
     <h3>Stuck? Check this order</h3>
     <ol class="help-steps">

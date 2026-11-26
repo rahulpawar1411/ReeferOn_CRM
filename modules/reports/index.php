@@ -2,6 +2,7 @@
 $pageTitle = 'Reports';
 $currentPage = 'reports';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('reports.view');
 require_once __DIR__ . '/../../includes/header.php';
 
 $reports = [

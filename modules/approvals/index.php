@@ -2,6 +2,7 @@
 $pageTitle = 'Approvals';
 $currentPage = 'approvals';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('approvals.view');
 
 $tab = $_GET['tab'] ?? 'pending';
 if (!in_array($tab, ['pending', 'done', 'all'], true)) {

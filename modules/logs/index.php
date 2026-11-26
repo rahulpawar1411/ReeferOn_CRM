@@ -2,6 +2,7 @@
 $pageTitle = 'Logs';
 $currentPage = 'logs';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('logs.view');
 
 $module = trim($_GET['module'] ?? '');
 $action = trim($_GET['action'] ?? '');
@@ -115,7 +116,20 @@ require_once __DIR__ . '/../../includes/header.php';
         — <strong><?= (int) page_size_logs() ?></strong> rows per page.
     </p>
 
-    <form class="toolbar" method="get" action="">
+    <?php
+    $filterActive = ($module !== '' || $action !== '' || $from !== '' || $to !== '' || $q !== '');
+    $excelUrl = base_url('modules/logs/index.php') . '?' . http_build_query(array_filter([
+        'module' => $module,
+        'action' => $action,
+        'from' => $from,
+        'to' => $to,
+        'q' => $q,
+        'export' => '1',
+    ], static fn($v) => $v !== '' && $v !== null));
+    $leading = '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
+    filter_flip_start('Logs Filters', $filterActive, base_url('modules/logs/index.php'), $leading);
+    ?>
+    <form class="filter-flip-form" method="get" action="">
         <div class="field">
             <label>Module</label>
             <select name="module">
@@ -146,16 +160,11 @@ require_once __DIR__ . '/../../includes/header.php';
             <label>Search</label>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="Record / action / user">
         </div>
-        <button type="submit" class="btn">Filter</button>
-        <a class="btn btn-secondary" href="?<?= e(http_build_query(array_filter([
-            'module' => $module,
-            'action' => $action,
-            'from' => $from,
-            'to' => $to,
-            'q' => $q,
-            'export' => '1',
-        ], static fn($v) => $v !== '' && $v !== null))) ?>">Excel (CSV)</a>
+        <div class="filter-flip-actions">
+            <button type="submit" class="btn">Apply Filters</button>
+        </div>
     </form>
+    <?php filter_flip_end(); ?>
 
     <?php if (!$rows): ?>
         <div class="empty">No log rows match. Use the CRM (create prospect, change stage, upload docs…) and refresh.</div>

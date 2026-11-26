@@ -69,7 +69,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <dt>Company Name</dt><dd><?= e($p['company_name']) ?></dd>
         <dt>Contact Person</dt><dd><?= e($p['contact_person']) ?></dd>
         <dt>Designation</dt><dd><?= e($p['designation'] ?? '-') ?></dd>
-        <dt>Mobile</dt><dd><?= e($p['mobile']) ?></dd>
+        <dt>Phone</dt><dd><?= e($p['mobile']) ?></dd>
         <dt>Email</dt><dd><?= e($p['email'] ?? '-') ?></dd>
         <dt>Business Type</dt><dd><?= e($p['business_type']) ?></dd>
         <dt>Industry</dt><dd><?= e($p['industry'] ?? '-') ?></dd>

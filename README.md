@@ -16,16 +16,27 @@ PHP + MySQL CRM for ReeferON (Prospect → Onboarding → Customer Master).
 - Phase 3: Customer Onboarding + Documents (done)
 - Phase 4: Admin Approval + Customer Code (done – direct Admin only)
 - Phase 5: Customer Master edit + direct existing add + GSTIN/name duplicate check (done)
-- Phase 6: Dashboard / Reports / Notifications / Activity (done)
-- Next: Phase 7 Login + role-based access
-- Auth: later (temp user = System User)
-- UI/UX polish: later
+- Phase 6: Dashboard / Reports / Notifications / Logs (done)
+- Phase 7: Login + Roles with checkbox access (done)
+- Next: Phase 8 Testing + Go-Live
+
+### Demo logins
+| Login ID | Password | Role |
+|----------|----------|------|
+| `system` | `password` | Super Admin |
+| `admin` | `admin123` | Admin |
+| `sales` | `sales123` | Salesperson |
+| `management` | `mgmt123` | Management |
+| `viewer` | `viewer123` | Viewer |
+
+Roles → edit checkboxes anytime (defaults + customize).
 
 ## How to open (WAMP)
 
 1. Start **WAMP** (green icon).
 2. First time only: open [http://localhost/CRM/setup_install.php](http://localhost/CRM/setup_install.php) to create the database.
-3. Open: [http://localhost/CRM/](http://localhost/CRM/)
+3. Login: [http://localhost/CRM/login.php](http://localhost/CRM/login.php)
+4. Open: [http://localhost/CRM/](http://localhost/CRM/)
 4. Create prospect: [http://localhost/CRM/modules/prospects/create.php](http://localhost/CRM/modules/prospects/create.php)
 5. Follow-ups: [http://localhost/CRM/modules/followups/index.php](http://localhost/CRM/modules/followups/index.php)
 6. Approvals: [http://localhost/CRM/modules/approvals/index.php](http://localhost/CRM/modules/approvals/index.php)

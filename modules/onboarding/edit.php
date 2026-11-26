@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $brand_name = trim($_POST['brand_name'] ?? '');
     $business_type = $_POST['business_type'] ?? '';
     $contact_person = trim($_POST['contact_person'] ?? '');
-    $mobile = trim($_POST['mobile'] ?? '');
+    $mobile = phone_digits($_POST['mobile'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $registered_address = trim($_POST['registered_address'] ?? '');
     $billing_address = trim($_POST['billing_address'] ?? '');
@@ -44,7 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($customer_name === '') $errors[] = 'Customer Name is required.';
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
-    if ($mobile === '') $errors[] = 'Mobile is required.';
+    $phoneErr = phone_error($mobile, true);
+    if ($phoneErr) $errors[] = $phoneErr;
     if (!in_array($business_type, ['QSR','FMCG','Ice Cream','Retail','Other'], true)) $errors[] = 'Invalid business type.';
     if (!in_array($service_required, ['Transportation','Warehousing','EV','Integrated Supply Chain','Other'], true)) $errors[] = 'Invalid service.';
     if (!in_array($temperature_requirement, ['Ambient','Chiller','Frozen'], true)) $errors[] = 'Invalid temperature.';
@@ -179,8 +180,8 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="text" name="contact_person" required value="<?= e($o['contact_person']) ?>">
             </div>
             <div class="form-group">
-                <label>Mobile <span class="required">*</span></label>
-                <input type="text" name="mobile" required value="<?= e($o['mobile']) ?>">
+                <label>Phone number <span class="required">*</span></label>
+                <?php render_phone_input('mobile', $o['mobile'] ?? '', true); ?>
             </div>
             <div class="form-group">
                 <label>Email</label>

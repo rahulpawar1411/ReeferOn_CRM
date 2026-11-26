@@ -158,10 +158,99 @@
     });
   }
 
+  function bindPhoneInputs() {
+    document.querySelectorAll('input.js-phone-10').forEach(function (input) {
+      input.setAttribute('maxlength', '10');
+      input.setAttribute('inputmode', 'numeric');
+      input.addEventListener('input', function () {
+        var digits = (input.value || '').replace(/\D+/g, '').slice(0, 10);
+        if (input.value !== digits) {
+          input.value = digits;
+        }
+      });
+      input.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var text = (e.clipboardData || window.clipboardData).getData('text') || '';
+        var digits = text.replace(/\D+/g, '');
+        if (digits.indexOf('91') === 0 && digits.length >= 12) {
+          digits = digits.slice(2);
+        }
+        if (digits.charAt(0) === '0' && digits.length === 11) {
+          digits = digits.slice(1);
+        }
+        input.value = digits.slice(0, 10);
+      });
+      input.addEventListener('keypress', function (e) {
+        if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+        if (!/[0-9]/.test(e.key)) {
+          e.preventDefault();
+        }
+      });
+    });
+  }
+
+  function openFilterFlip(id) {
+    var panel = document.getElementById(id);
+    if (!panel) return;
+    document.querySelectorAll('.filter-flip.open').forEach(function (p) {
+      p.classList.remove('open');
+      p.setAttribute('aria-hidden', 'true');
+    });
+    document.querySelectorAll('.filter-flip-backdrop').forEach(function (b) {
+      b.hidden = true;
+    });
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    document.querySelectorAll('.filter-flip-backdrop[data-filter-target="' + id + '"]').forEach(function (b) {
+      b.hidden = false;
+    });
+    document.body.classList.add('filter-flip-open');
+  }
+
+  function closeFilterFlip(id) {
+    var panel = id ? document.getElementById(id) : null;
+    if (panel) {
+      panel.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+      document.querySelectorAll('.filter-flip-backdrop[data-filter-target="' + id + '"]').forEach(function (b) {
+        b.hidden = true;
+      });
+    } else {
+      document.querySelectorAll('.filter-flip.open').forEach(function (p) {
+        p.classList.remove('open');
+        p.setAttribute('aria-hidden', 'true');
+      });
+      document.querySelectorAll('.filter-flip-backdrop').forEach(function (b) {
+        b.hidden = true;
+      });
+    }
+    if (!document.querySelector('.filter-flip.open')) {
+      document.body.classList.remove('filter-flip-open');
+    }
+  }
+
+  function bindFilterFlip() {
+    document.querySelectorAll('.js-filter-open').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openFilterFlip(btn.getAttribute('data-filter-target'));
+      });
+    });
+    document.querySelectorAll('.js-filter-close, .js-filter-backdrop').forEach(function (el) {
+      el.addEventListener('click', function () {
+        closeFilterFlip(el.getAttribute('data-filter-target'));
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeFilterFlip();
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     bindConfirm();
     bindNavLoader();
     bindLazyTables();
+    bindPhoneInputs();
+    bindFilterFlip();
   });
 
   window.addEventListener('pageshow', function (e) {

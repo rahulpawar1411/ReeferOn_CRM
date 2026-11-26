@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/auth.php';
 
 /**
  * App base URL path (works from any module depth under /CRM or /reeferon-crm).
@@ -9,15 +10,19 @@ function base_url(string $path = ''): string
     static $base = null;
 
     if ($base === null) {
-        $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
-        $appRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));
+        $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '');
+        $appRoot = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: '');
 
         if ($docRoot && $appRoot && str_starts_with($appRoot, $docRoot)) {
             $base = substr($appRoot, strlen($docRoot));
         } else {
-            $base = '';
+            // CLI / fallback for WAMP folder name
+            $base = '/CRM';
         }
         $base = rtrim(str_replace('\\', '/', $base), '/');
+        if ($base === '') {
+            $base = '/CRM';
+        }
     }
 
     $path = ltrim($path, '/');
@@ -27,9 +32,109 @@ function base_url(string $path = ''): string
     return $base . ($path !== '' ? '/' . $path : '');
 }
 
+/** Normalize stored app links (fix CLI seeds missing /CRM) */
+function app_url(?string $url): string
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return base_url('index.php');
+    }
+    if (preg_match('#^https?://#i', $url)) {
+        return $url;
+    }
+    if (str_starts_with($url, '/CRM/') || $url === '/CRM') {
+        return $url;
+    }
+    if (str_starts_with($url, '/modules/') || str_starts_with($url, 'modules/')) {
+        return base_url(ltrim($url, '/'));
+    }
+    if (str_starts_with($url, '/')) {
+        return base_url(ltrim($url, '/'));
+    }
+    return base_url($url);
+}
+
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+/** Digits only, strip leading 91/0, max 10 */
+function phone_digits(?string $raw): string
+{
+    $digits = preg_replace('/\D+/', '', (string) $raw) ?? '';
+    if (str_starts_with($digits, '91') && strlen($digits) >= 12) {
+        $digits = substr($digits, 2);
+    }
+    if (str_starts_with($digits, '0') && strlen($digits) === 11) {
+        $digits = substr($digits, 1);
+    }
+    return substr($digits, 0, 10);
+}
+
+/** Store as +91XXXXXXXXXX (or null if empty) */
+function phone_store(?string $raw): ?string
+{
+    $digits = phone_digits($raw);
+    return $digits === '' ? null : ('+91' . $digits);
+}
+
+/** Error message or null if OK */
+function phone_error(?string $raw, bool $required = false): ?string
+{
+    $digits = phone_digits($raw);
+    if ($digits === '') {
+        return $required ? 'Phone number is required.' : null;
+    }
+    if (!preg_match('/^\d{10}$/', $digits)) {
+        return 'Phone number must be exactly 10 digits.';
+    }
+    return null;
+}
+
+/** Render +91 phone input (10 digits only) */
+function render_phone_input(string $name, ?string $value, bool $required = false, string $placeholder = '10-digit number'): void
+{
+    $digits = phone_digits($value);
+    $req = $required ? ' required' : '';
+    echo '<div class="phone-field">';
+    echo '<span class="phone-code">+91</span>';
+    echo '<input type="tel" class="js-phone-10" name="' . e($name) . '" value="' . e($digits) . '"'
+        . $req . ' maxlength="10" inputmode="numeric" pattern="[0-9]{10}"'
+        . ' placeholder="' . e($placeholder) . '" autocomplete="tel-national">';
+    echo '</div>';
+}
+
+/** Open right-side filter flip panel (call before filter fields) */
+function filter_flip_start(string $title = 'Filters', bool $active = false, string $resetUrl = '', string $leadingHtml = ''): void
+{
+    static $n = 0;
+    $n++;
+    $id = 'filterFlip' . $n;
+    $activeClass = $active ? ' has-active' : '';
+    echo '<div class="filter-flip-bar">';
+    echo '<div class="filter-flip-bar-left">' . $leadingHtml . '</div>';
+    echo '<div class="filter-flip-bar-right">';
+    echo '<button type="button" class="btn btn-secondary js-filter-open' . $activeClass . '" data-filter-target="' . e($id) . '">';
+    echo 'Filters' . ($active ? ' •' : '');
+    echo '</button>';
+    if ($resetUrl !== '') {
+        echo ' <a class="btn btn-secondary" href="' . e($resetUrl) . '">Reset</a>';
+    }
+    echo '</div></div>';
+    echo '<div class="filter-flip-backdrop js-filter-backdrop" data-filter-target="' . e($id) . '" hidden></div>';
+    echo '<aside class="filter-flip" id="' . e($id) . '" aria-hidden="true">';
+    echo '<div class="filter-flip-head">';
+    echo '<h3>' . e($title) . '</h3>';
+    echo '<button type="button" class="filter-flip-x js-filter-close" data-filter-target="' . e($id) . '" aria-label="Close">&times;</button>';
+    echo '</div>';
+    echo '<div class="filter-flip-body">';
+}
+
+/** Close filter flip panel wrapper */
+function filter_flip_end(): void
+{
+    echo '</div></aside>';
 }
 
 function redirect(string $path): void
@@ -61,9 +166,26 @@ function get_flash(): ?array
 
 function current_user(): array
 {
+    $u = auth_user();
+    if ($u) {
+        return [
+            'id' => (int) $u['id'],
+            'name' => (string) $u['employee_name'],
+            'user_id' => (string) $u['user_id'],
+            'role_name' => (string) ($u['role_name'] ?? ''),
+            'department' => (string) ($u['department'] ?? ''),
+            'permissions' => $u['permissions'] ?? [],
+        ];
+    }
+
+    // Not logged in – guest (pages should call require_login)
     return [
-        'id'   => TEMP_USER_ID,
-        'name' => TEMP_USER_NAME,
+        'id' => 0,
+        'name' => 'Guest',
+        'user_id' => '',
+        'role_name' => '',
+        'department' => '',
+        'permissions' => [],
     ];
 }
 
@@ -581,6 +703,22 @@ function unread_notifications_count(?int $userId = null): int
             return (int) $stmt->fetchColumn();
         }
         return (int) db()->query('SELECT COUNT(*) FROM notifications WHERE is_read = 0')->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/** Pending Admin approvals (red-dot until cleared) */
+function pending_approvals_count(): int
+{
+    try {
+        return (int) db()->query(
+            "SELECT COUNT(*) FROM onboarding_approvals a
+             JOIN onboarding o ON o.id = a.onboarding_pk
+             WHERE a.department = 'Admin'
+               AND a.status = 'Pending'
+               AND o.overall_status IN ('Submitted','In Approval')"
+        )->fetchColumn();
     } catch (Throwable $e) {
         return 0;
     }

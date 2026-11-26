@@ -13,5 +13,5 @@ if (!$n) {
 
 db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ?')->execute([$id]);
 
-$link = $n['link_url'] ?: base_url('modules/notifications/index.php');
+$link = !empty($n['link_url']) ? app_url($n['link_url']) : base_url('modules/notifications/index.php');
 redirect($link);

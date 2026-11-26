@@ -2,6 +2,7 @@
 $pageTitle = 'Customer Master';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('customers.view');
 
 $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
@@ -66,7 +67,11 @@ require_once __DIR__ . '/../../includes/header.php';
     <h2>Existing Customer Master</h2>
     <p class="step-note"><strong>Official customers:</strong> From Admin-approved onboarding, or added directly here (skip prospect pipeline). Soft status only — no permanent delete.</p>
 
-    <form class="toolbar" method="get" action="">
+    <?php
+    $filterActive = ($q !== '' || $status !== '' || $source !== '');
+    filter_flip_start('Customer Filters', $filterActive, base_url('modules/customers/index.php'));
+    ?>
+    <form class="filter-flip-form" method="get" action="">
         <div class="field">
             <label>Search</label>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="Code / name / mobile / GSTIN">
@@ -89,8 +94,12 @@ require_once __DIR__ . '/../../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <button type="submit" class="btn">Filter</button>
+        <div class="filter-flip-actions">
+            <button type="submit" class="btn">Apply Filters</button>
+            <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Reset</a>
+        </div>
     </form>
+    <?php filter_flip_end(); ?>
 
     <?php if (!$rows): ?>
         <div class="empty">No customers yet. Approve an onboarding or <a href="<?= e(base_url('modules/customers/create.php')) ?>">add an existing customer</a>.</div>
@@ -101,7 +110,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <th>Customer Code</th>
                 <th>Name</th>
                 <th>Contact</th>
-                <th>Mobile</th>
+                <th>Phone</th>
                 <th>GSTIN</th>
                 <th>Source</th>
                 <th>Status</th>

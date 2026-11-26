@@ -2,6 +2,7 @@
 $pageTitle = 'Prospects';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('prospects.view');
 
 $q = trim($_GET['q'] ?? '');
 $stage = trim($_GET['stage'] ?? '');
@@ -80,11 +81,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups. <?= (int) page_size_default() ?> rows per page.</p>
-    <div class="toolbar">
-        <a class="btn" href="<?= e(base_url('modules/prospects/create.php')) ?>">+ New Prospect</a>
-    </div>
-
-    <form method="get" class="toolbar">
+    <?php
+    $filterActive = ($q !== '' || $stage !== '' || $business_type !== '' || $city !== '' || $date_from !== '' || $date_to !== '');
+    $newBtn = '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a>';
+    filter_flip_start('Prospect Filters', $filterActive, base_url('modules/prospects/index.php'), $newBtn);
+    ?>
+    <form method="get" class="filter-flip-form" action="">
         <div class="field">
             <label>Search</label>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="ID / company / mobile / email">
@@ -119,9 +121,12 @@ require_once __DIR__ . '/../../includes/header.php';
             <label>To</label>
             <input type="date" name="date_to" value="<?= e($date_to) ?>">
         </div>
-        <button class="btn" type="submit">Filter</button>
-        <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Reset</a>
+        <div class="filter-flip-actions">
+            <button class="btn" type="submit">Apply Filters</button>
+            <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Reset</a>
+        </div>
     </form>
+    <?php filter_flip_end(); ?>
 </div>
 
 <div class="card">
@@ -135,7 +140,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <th>Date</th>
                 <th>Company</th>
                 <th>Contact</th>
-                <th>Mobile</th>
+                <th>Phone</th>
                 <th>City</th>
                 <th>Service</th>
                 <th>Stage</th>

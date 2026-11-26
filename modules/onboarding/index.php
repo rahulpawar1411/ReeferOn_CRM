@@ -62,7 +62,11 @@ require_once __DIR__ . '/../../includes/header.php';
     <h2>Onboarding List</h2>
     <p class="step-note"><strong>Step 3 – Onboarding list:</strong> Only leads that have started onboarding appear here. To start a new one: open the Prospect → set stage to <strong>Commercial Approved</strong> → click <em>Initiate Customer Onboarding</em>.</p>
 
-    <form class="toolbar" method="get" action="">
+    <?php
+    $filterActive = ($q !== '' || $status !== '');
+    filter_flip_start('Onboarding Filters', $filterActive, base_url('modules/onboarding/index.php'));
+    ?>
+    <form class="filter-flip-form" method="get" action="">
         <div class="field">
             <label>Search</label>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="ID, company, mobile, GSTIN">
@@ -76,8 +80,12 @@ require_once __DIR__ . '/../../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <button type="submit" class="btn">Filter</button>
+        <div class="filter-flip-actions">
+            <button type="submit" class="btn">Apply Filters</button>
+            <a class="btn btn-secondary" href="<?= e(base_url('modules/onboarding/index.php')) ?>">Reset</a>
+        </div>
     </form>
+    <?php filter_flip_end(); ?>
 
     <?php if (!$rows): ?>
         <div class="empty">No onboarding records yet.</div>
@@ -89,7 +97,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <th>Prospect</th>
                 <th>Customer</th>
                 <th>Contact</th>
-                <th>Mobile</th>
+                <th>Phone</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th></th>

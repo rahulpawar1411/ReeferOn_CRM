@@ -42,7 +42,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <dt>Brand Name</dt><dd><?= e($o['brand_name'] ?? '-') ?></dd>
         <dt>Business Type</dt><dd><?= e($o['business_type']) ?></dd>
         <dt>Contact Person</dt><dd><?= e($o['contact_person']) ?></dd>
-        <dt>Mobile</dt><dd><?= e($o['mobile']) ?></dd>
+        <dt>Phone</dt><dd><?= e($o['mobile']) ?></dd>
         <dt>Email</dt><dd><?= e($o['email'] ?? '-') ?></dd>
         <dt>GSTIN</dt><dd><?= e($o['gstin'] ?? '-') ?></dd>
         <dt>PAN</dt><dd><?= e($o['pan'] ?? '-') ?></dd>

@@ -2,6 +2,7 @@
 $pageTitle = 'Add Existing Customer';
 $currentPage = 'customer_create';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('customers.create');
 
 $user = current_user();
 $errors = [];
@@ -40,7 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($form['customer_name'] === '') $errors[] = 'Customer Name is required.';
     if ($form['contact_person'] === '') $errors[] = 'Contact Person is required.';
-    if ($form['mobile'] === '') $errors[] = 'Mobile is required.';
+    $form['mobile'] = phone_digits($form['mobile']);
+    $phoneErr = phone_error($form['mobile'], true);
+    if ($phoneErr) $errors[] = $phoneErr;
     if (!in_array($form['business_type'], ['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'], true)) {
         $errors[] = 'Invalid business type.';
     }
@@ -198,8 +201,8 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="text" name="contact_person" required value="<?= e($form['contact_person']) ?>">
             </div>
             <div class="form-group">
-                <label>Mobile <span class="required">*</span></label>
-                <input type="text" name="mobile" required value="<?= e($form['mobile']) ?>">
+                <label>Phone number <span class="required">*</span></label>
+                <?php render_phone_input('mobile', $form['mobile'], true); ?>
             </div>
             <div class="form-group">
                 <label>Email</label>
