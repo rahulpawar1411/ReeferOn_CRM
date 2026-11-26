@@ -547,6 +547,7 @@
     if (action === 'edit') return 'Updated';
     if (action === 'delete') return 'Inactive'; // flash action key stays "delete"
     if (action === 'activate') return 'Active';
+    if (action === 'login') return 'Welcome';
     return 'Saved';
   }
 

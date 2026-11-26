@@ -195,9 +195,9 @@ function redirect(string $path): void
 /**
  * Save a one-time message for the next page.
  *
- * $action (optional): 'create' | 'edit' | 'delete' | 'activate'
- * Toast titles: delete → "Inactive", activate → "Active".
- * Success + action → top-right toast with Undo (acknowledgement only).
+ * $action (optional): 'create' | 'edit' | 'delete' | 'activate' | 'login'
+ * Toast titles: delete → "Inactive", activate → "Active", login → "Welcome".
+ * Success + action → top-right toast (Undo only for create/edit/delete/activate).
  */
 function flash(string $type, string $message, ?string $action = null): void
 {
@@ -205,7 +205,7 @@ function flash(string $type, string $message, ?string $action = null): void
         session_start();
     }
     $action = $action !== null ? strtolower(trim($action)) : null;
-    if ($action !== null && !in_array($action, ['create', 'edit', 'delete', 'activate'], true)) {
+    if ($action !== null && !in_array($action, ['create', 'edit', 'delete', 'activate', 'login'], true)) {
         $action = null;
     }
     $_SESSION['flash'] = [

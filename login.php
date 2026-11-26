@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = login_user($userId, $password);
         if ($result['ok']) {
             write_audit('users', $userId, 'LOGIN', null, 'Logged in');
-            flash('success', 'Welcome, ' . $result['user']['employee_name'] . '.');
+            flash('success', 'Welcome, ' . $result['user']['employee_name'] . '.', 'login');
 
             $next = is_string($nextRaw) ? $nextRaw : '';
             // Security: only allow in-app paths like /CRM/... (block external redirects)
