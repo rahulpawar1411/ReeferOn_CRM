@@ -7,6 +7,7 @@
 $pageTitle = 'Edit Onboarding';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('onboarding.edit');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM onboarding WHERE id = ?');
@@ -45,8 +46,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $commercial_reference = trim($_POST['commercial_reference'] ?? '');
     $payment_terms = trim($_POST['payment_terms'] ?? '');
     $credit_limit = trim($_POST['credit_limit'] ?? '');
-    $overall_status = $_POST['overall_status'] ?? $o['overall_status'];
     $action = $_POST['action'] ?? 'save';
+    // Approved / Rejected / In Approval only via Approvals — never from this form
+    if ($action === 'submit') {
+        $overall_status = 'Submitted';
+    } elseif (in_array($o['overall_status'], ['Draft', 'Rejected', 'Cancelled'], true)) {
+        $postedStatus = $_POST['overall_status'] ?? 'Draft';
+        if (!in_array($postedStatus, ['Draft', 'Cancelled'], true)) {
+            $errors[] = 'Invalid status.';
+            $overall_status = $o['overall_status'];
+        } else {
+            $overall_status = $postedStatus;
+        }
+    } else {
+        $overall_status = $o['overall_status'];
+    }
 
     if ($customer_name === '') $errors[] = 'Customer Name is required.';
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
@@ -59,10 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($storage_requirement !== '' && !in_array($storage_requirement, storage_requirements(), true)) $errors[] = 'Invalid storage.';
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email.';
     if ($credit_limit !== '' && !is_numeric($credit_limit)) $errors[] = 'Credit limit must be a number.';
-    if (!in_array($overall_status, onboarding_statuses(), true)) $errors[] = 'Invalid status.';
 
     if ($action === 'submit') {
-        $overall_status = 'Submitted';
+        if (!in_array($o['overall_status'], ['Draft', 'Rejected', 'Cancelled'], true)) {
+            $errors[] = 'This onboarding cannot be submitted from its current status.';
+        }
         if ($gstin === '') $errors[] = 'GSTIN is required before submit.';
         if ($registered_address === '') $errors[] = 'Registered Address is required before submit.';
         if ($pan === '') $errors[] = 'PAN is required before submit.';
@@ -285,11 +300,19 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Status</label>
-                <select name="overall_status">
-                    <?php foreach (onboarding_statuses() as $s): ?>
-                        <option value="<?= e($s) ?>" <?= ($o['overall_status'] === $s) ? 'selected' : '' ?>><?= e($s) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if (in_array($o['overall_status'], ['Draft', 'Rejected', 'Cancelled'], true)): ?>
+                    <select name="overall_status">
+                        <?php foreach (['Draft', 'Cancelled'] as $s): ?>
+                            <option value="<?= e($s) ?>" <?= ($o['overall_status'] === $s || ($o['overall_status'] === 'Rejected' && $s === 'Draft')) ? 'selected' : '' ?>><?= e($s) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if ($o['overall_status'] === 'Rejected'): ?>
+                        <small class="step-note">Currently Rejected — save as Draft or Cancelled, or submit again.</small>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <input type="text" value="<?= e($o['overall_status']) ?>" disabled>
+                    <small class="step-note">Approval statuses change only from Approvals.</small>
+                <?php endif; ?>
             </div>
         </div>
 

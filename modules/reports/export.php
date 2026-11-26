@@ -5,6 +5,7 @@
  * Downloads the selected report as an Excel-friendly CSV file.
  */
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('reports.export');
 require_once __DIR__ . '/_data.php';
 
 $type = $_GET['type'] ?? '';

@@ -131,9 +131,19 @@ function render_phone_input(string $name, ?string $value, bool $required = false
 // SECTION: Right-side filter drawer (Filters button on list pages)
 // =============================================================================
 
-/** Start the filter drawer HTML. Put form fields next, then call filter_flip_end(). */
-function filter_flip_start(string $title = 'Filters', bool $active = false, string $resetUrl = '', string $leadingHtml = ''): void
-{
+/**
+ * Start the filter drawer HTML.
+ * Optional $liveSearch shows a search box beside the Filters button (types → list filters).
+ *
+ * @param array{name?:string,value?:string,placeholder?:string}|null $liveSearch
+ */
+function filter_flip_start(
+    string $title = 'Filters',
+    bool $active = false,
+    string $resetUrl = '',
+    string $leadingHtml = '',
+    ?array $liveSearch = null
+): void {
     static $n = 0;
     $n++;
     $id = 'filterFlip' . $n;
@@ -141,6 +151,14 @@ function filter_flip_start(string $title = 'Filters', bool $active = false, stri
     echo '<div class="filter-flip-bar">';
     echo '<div class="filter-flip-bar-left">' . $leadingHtml . '</div>';
     echo '<div class="filter-flip-bar-right">';
+    if ($liveSearch !== null) {
+        $sName = $liveSearch['name'] ?? 'q';
+        $sVal = (string) ($liveSearch['value'] ?? '');
+        $sPh = (string) ($liveSearch['placeholder'] ?? 'Search…');
+        echo '<input type="search" class="filter-live-search js-live-search" name="' . e($sName) . '"'
+            . ' value="' . e($sVal) . '" placeholder="' . e($sPh) . '"'
+            . ' data-param="' . e($sName) . '" autocomplete="off">';
+    }
     echo '<button type="button" class="btn btn-secondary js-filter-open' . $activeClass . '" data-filter-target="' . e($id) . '">';
     echo 'Filters' . ($active ? ' •' : '');
     echo '</button>';
@@ -157,7 +175,7 @@ function filter_flip_start(string $title = 'Filters', bool $active = false, stri
     echo '<div class="filter-flip-body">';
 }
 
-/** Close filter flip panel wrapper */
+/** Close the filter drawer HTML opened by filter_flip_start(). */
 function filter_flip_end(): void
 {
     echo '</div></aside>';
@@ -177,7 +195,8 @@ function redirect(string $path): void
 /**
  * Save a one-time message for the next page.
  *
- * $action (optional): 'create' | 'edit' | 'delete'
+ * $action (optional): 'create' | 'edit' | 'delete' | 'activate'
+ * Toast titles: delete → "Inactive", activate → "Active".
  * Success + action → top-right toast with Undo (acknowledgement only).
  */
 function flash(string $type, string $message, ?string $action = null): void
@@ -186,7 +205,7 @@ function flash(string $type, string $message, ?string $action = null): void
         session_start();
     }
     $action = $action !== null ? strtolower(trim($action)) : null;
-    if ($action !== null && !in_array($action, ['create', 'edit', 'delete'], true)) {
+    if ($action !== null && !in_array($action, ['create', 'edit', 'delete', 'activate'], true)) {
         $action = null;
     }
     $_SESSION['flash'] = [
@@ -394,39 +413,45 @@ function onboarding_doc_submit_errors(int $onboardingPk): array
     return $errors;
 }
 
+/** Vehicle size options for onboarding forms. */
 function vehicle_requirements(): array
 {
     return ['8ft', '10ft', '14ft', '20ft', 'Other'];
 }
 
+/** Storage / temperature options for onboarding forms. */
 function storage_requirements(): array
 {
     return ['Ambient', 'Chiller', 'Frozen'];
 }
 
+/** Overall onboarding workflow statuses. */
 function onboarding_statuses(): array
 {
     return ['Draft', 'Submitted', 'In Approval', 'Approved', 'Rejected', 'Cancelled'];
 }
 
+/** Per-document statuses (upload checklist). */
 function doc_statuses(): array
 {
     return ['Pending', 'Received', 'Rejected', 'Not Applicable'];
 }
 
+/** Who can approve onboarding (Admin only). */
 function approval_departments(): array
 {
     // Locked decision: direct Admin approval only (details already filled before submit).
     return ['Admin'];
 }
 
+/** Customer Master status options. */
 function customer_statuses(): array
 {
     return ['Active', 'Inactive', 'On Hold'];
 }
 
 // =============================================================================
-// SECTION: Customer duplicates, Admin approval, pipeline stage change
+// SECTION: Customer duplicates and Admin approval
 // =============================================================================
 
 /**
@@ -658,33 +683,45 @@ function reset_onboarding_approvals(int $onboardingPk): void
     )->execute([$onboardingPk]);
 }
 
+// =============================================================================
+// SECTION: Inactive / Active soft status (confirm popup)
+// =============================================================================
+
 /**
- * True only when user typed exactly "delete" in the confirm popup.
+ * True when user typed the required confirm word (default: inactive).
  */
-function delete_confirm_ok(?string $typed): bool
+function delete_confirm_ok(?string $typed, string $word = 'inactive'): bool
 {
-    return strtolower(trim((string) $typed)) === 'delete';
+    return strtolower(trim((string) $typed)) === strtolower(trim($word));
 }
 
 /**
- * Centered delete confirmation popup (type "delete" to enable the button).
+ * Centered confirm popup — type the word (e.g. inactive / active / clear) to enable the button.
  *
- * @param array{title?:string,message?:string,item_label?:string,cancel_url?:string,hidden?:array<string,string|int>} $opts
+ * @param array{title?:string,message?:string,item_label?:string,cancel_url?:string,confirm_word?:string,confirm_btn?:string,confirm_btn_class?:string,title_class?:string,hidden?:array<string,string|int>} $opts
  */
 function render_delete_confirm_modal(array $opts = []): void
 {
-    $title = $opts['title'] ?? 'Confirm delete';
-    $message = $opts['message'] ?? 'Are you sure you want to delete this?';
+    $title = $opts['title'] ?? 'Make inactive?';
+    $message = $opts['message'] ?? 'Status will become Inactive. Data stays in history.';
     $item = $opts['item_label'] ?? '';
     $cancelUrl = $opts['cancel_url'] ?? '';
+    $confirmWord = strtolower(trim((string) ($opts['confirm_word'] ?? 'inactive')));
+    if ($confirmWord === '') {
+        $confirmWord = 'inactive';
+    }
+    $confirmBtn = $opts['confirm_btn'] ?? 'Inactive';
+    $confirmBtnClass = $opts['confirm_btn_class'] ?? 'btn btn-danger';
+    $titleClass = $opts['title_class'] ?? '';
     $hidden = $opts['hidden'] ?? [];
     ?>
 <div class="delete-modal-backdrop js-delete-modal"
      aria-hidden="false"
-     data-cancel-url="<?= e($cancelUrl) ?>">
+     data-cancel-url="<?= e($cancelUrl) ?>"
+     data-confirm-word="<?= e($confirmWord) ?>">
     <div class="delete-modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
         <div class="delete-modal-head">
-            <h2 id="deleteModalTitle"><?= e($title) ?></h2>
+            <h2 id="deleteModalTitle" class="<?= e($titleClass) ?>"><?= e($title) ?></h2>
             <button type="button" class="delete-modal-x js-delete-modal-close" aria-label="Close">&times;</button>
         </div>
         <p class="delete-modal-msg"><?= e($message) ?></p>
@@ -696,16 +733,16 @@ function render_delete_confirm_modal(array $opts = []): void
                 <input type="hidden" name="<?= e((string) $name) ?>" value="<?= e((string) $value) ?>">
             <?php endforeach; ?>
             <div class="form-group">
-                <label>Type <strong>delete</strong> to confirm</label>
+                <label>Type <strong><?= e($confirmWord) ?></strong> to confirm</label>
                 <input type="text" name="confirm_text" class="js-delete-confirm-input" autocomplete="off"
-                       placeholder="delete" autofocus>
+                       placeholder="<?= e($confirmWord) ?>" autofocus>
             </div>
             <div class="form-group">
                 <label>Reason (optional)</label>
                 <textarea name="reason" rows="2" placeholder="Optional note"></textarea>
             </div>
             <div class="delete-modal-actions">
-                <button type="submit" class="btn btn-danger js-delete-confirm-btn" disabled>Delete</button>
+                <button type="submit" class="<?= e($confirmBtnClass) ?> js-delete-confirm-btn" disabled><?= e($confirmBtn) ?></button>
                 <?php if ($cancelUrl !== ''): ?>
                     <a class="btn btn-secondary js-delete-modal-close" href="<?= e($cancelUrl) ?>">Cancel</a>
                 <?php else: ?>
@@ -719,8 +756,7 @@ function render_delete_confirm_modal(array $opts = []): void
 }
 
 /**
- * Soft-delete a prospect: set status = Inactive (row stays for history/logs).
- * Does not permanently remove the record.
+ * Make prospect Inactive (status only; row kept for history/logs).
  */
 function soft_delete_prospect(int $prospectPk, string $reason = ''): void
 {
@@ -736,11 +772,11 @@ function soft_delete_prospect(int $prospectPk, string $reason = ''): void
     }
     $pdo->prepare('UPDATE prospects SET status = ?, updated_by = ? WHERE id = ?')
         ->execute(['Inactive', current_user()['id'], $prospectPk]);
-    write_audit('prospects', $p['prospect_id'], 'SOFT_DELETE', 'Active', $reason !== '' ? $reason : 'Inactive');
+    write_audit('prospects', $p['prospect_id'], 'INACTIVE', 'Active', $reason !== '' ? $reason : 'Inactive');
 }
 
 /**
- * Soft-delete a customer: set status = Inactive (keeps Customer Code + history).
+ * Make customer Inactive (status only; Customer Code + history kept).
  */
 function soft_delete_customer(int $customerPk, string $reason = ''): void
 {
@@ -756,11 +792,11 @@ function soft_delete_customer(int $customerPk, string $reason = ''): void
     }
     $pdo->prepare('UPDATE customers SET status = ?, updated_by = ? WHERE id = ?')
         ->execute(['Inactive', current_user()['id'], $customerPk]);
-    write_audit('customers', $c['customer_code'], 'SOFT_DELETE', $c['status'], $reason !== '' ? $reason : 'Inactive');
+    write_audit('customers', $c['customer_code'], 'INACTIVE', $c['status'], $reason !== '' ? $reason : 'Inactive');
 }
 
 /**
- * Soft-delete (deactivate) a user login. Cannot deactivate yourself.
+ * Make user Inactive so they cannot log in. Cannot make yourself Inactive.
  */
 function soft_delete_user(int $userPk, string $reason = ''): void
 {
@@ -779,11 +815,65 @@ function soft_delete_user(int $userPk, string $reason = ''): void
         throw new RuntimeException('User is already Inactive.');
     }
     $pdo->prepare('UPDATE users SET status = ? WHERE id = ?')->execute(['Inactive', $userPk]);
-    write_audit('users', $u['user_id'], 'SOFT_DELETE', 'Active', $reason !== '' ? $reason : ('Deactivated ' . $u['employee_name']));
+    write_audit('users', $u['user_id'], 'INACTIVE', 'Active', $reason !== '' ? $reason : ('Inactive ' . $u['employee_name']));
+}
+
+/** Set prospect status back to Active. */
+function soft_activate_prospect(int $prospectPk, string $reason = ''): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT id, prospect_id, status FROM prospects WHERE id = ?');
+    $stmt->execute([$prospectPk]);
+    $p = $stmt->fetch();
+    if (!$p) {
+        throw new RuntimeException('Prospect not found.');
+    }
+    if ($p['status'] === 'Active') {
+        throw new RuntimeException('Prospect is already Active.');
+    }
+    $pdo->prepare('UPDATE prospects SET status = ?, updated_by = ? WHERE id = ?')
+        ->execute(['Active', current_user()['id'], $prospectPk]);
+    write_audit('prospects', $p['prospect_id'], 'ACTIVE', $p['status'], $reason !== '' ? $reason : 'Active');
+}
+
+/** Set customer status back to Active. */
+function soft_activate_customer(int $customerPk, string $reason = ''): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT id, customer_code, status FROM customers WHERE id = ?');
+    $stmt->execute([$customerPk]);
+    $c = $stmt->fetch();
+    if (!$c) {
+        throw new RuntimeException('Customer not found.');
+    }
+    if ($c['status'] === 'Active') {
+        throw new RuntimeException('Customer is already Active.');
+    }
+    $pdo->prepare('UPDATE customers SET status = ?, updated_by = ? WHERE id = ?')
+        ->execute(['Active', current_user()['id'], $customerPk]);
+    write_audit('customers', $c['customer_code'], 'ACTIVE', $c['status'], $reason !== '' ? $reason : 'Active');
+}
+
+/** Set user login back to Active. */
+function soft_activate_user(int $userPk, string $reason = ''): void
+{
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT id, user_id, employee_name, status FROM users WHERE id = ?');
+    $stmt->execute([$userPk]);
+    $u = $stmt->fetch();
+    if (!$u) {
+        throw new RuntimeException('User not found.');
+    }
+    if ($u['status'] === 'Active') {
+        throw new RuntimeException('User is already Active.');
+    }
+    $pdo->prepare('UPDATE users SET status = ? WHERE id = ?')->execute(['Active', $userPk]);
+    write_audit('users', $u['user_id'], 'ACTIVE', 'Inactive', $reason !== '' ? $reason : ('Active ' . $u['employee_name']));
 }
 
 /**
- * Remove an uploaded document file and reset row to Pending (not a hard DB delete).
+ * Clear an uploaded document file and reset the row to Pending.
+ * Does not remove the document checklist row.
  */
 function clear_onboarding_document(int $docId): void
 {
@@ -829,6 +919,10 @@ function clear_onboarding_document(int $docId): void
 
     write_audit('onboarding_documents', $d['onboarding_id'], 'CLEAR', $d['doc_type'], $d['file_name'] ?? '');
 }
+
+// =============================================================================
+// SECTION: Pipeline stage change
+// =============================================================================
 
 /**
  * Move a prospect to a new pipeline stage.
@@ -920,6 +1014,30 @@ function create_notification(
     ?int $userId = null
 ): void {
     try {
+        // Skip exact duplicate still unread (stops double list spam)
+        $dup = db()->prepare(
+            'SELECT id FROM notifications
+             WHERE event_type = ?
+               AND title = ?
+               AND message = ?
+               AND IFNULL(link_url, \'\') = IFNULL(?, \'\')
+               AND IFNULL(related_module, \'\') = IFNULL(?, \'\')
+               AND IFNULL(related_id, \'\') = IFNULL(?, \'\')
+               AND is_read = 0
+             LIMIT 1'
+        );
+        $dup->execute([
+            $eventType,
+            $title,
+            $message,
+            $linkUrl,
+            $relatedModule,
+            $relatedId,
+        ]);
+        if ($dup->fetch()) {
+            return;
+        }
+
         $stmt = db()->prepare(
             'INSERT INTO notifications
              (user_id, event_type, title, message, link_url, related_module, related_id)
@@ -939,6 +1057,7 @@ function create_notification(
     }
 }
 
+/** Count unread notifications (optional filter by user_id). */
 function unread_notifications_count(?int $userId = null): int
 {
     try {
@@ -972,6 +1091,30 @@ function pending_approvals_count(): int
 // =============================================================================
 // SECTION: Excel/CSV export and Global Search
 // =============================================================================
+
+/**
+ * Excel export must have From + To dates first.
+ * Returns error message, or null if OK.
+ */
+function export_date_range_error(?string $from, ?string $to): ?string
+{
+    $from = trim((string) $from);
+    $to = trim((string) $to);
+    if ($from === '' || $to === '') {
+        return 'Select From date and To date in Filters, Apply Filters, then click Excel (CSV).';
+    }
+    $fromDt = DateTime::createFromFormat('Y-m-d', $from);
+    $toDt = DateTime::createFromFormat('Y-m-d', $to);
+    $fromOk = $fromDt && $fromDt->format('Y-m-d') === $from;
+    $toOk = $toDt && $toDt->format('Y-m-d') === $to;
+    if (!$fromOk || !$toOk) {
+        return 'From / To dates must be valid.';
+    }
+    if ($from > $to) {
+        return 'From date cannot be after To date.';
+    }
+    return null;
+}
 
 /**
  * Download rows as a CSV file that Excel can open.
@@ -1058,10 +1201,10 @@ function global_search(string $q, int $limit = 40): array
 }
 
 // =============================================================================
-// SECTION: AJAX helpers and pagination (Load more / page links)
+// SECTION: AJAX helpers and pagination (Prev / Next)
 // =============================================================================
 
-/** True when the page was called with ?ajax=1 (used by lazy tables). */
+/** True when the page was called with ?ajax=1 (JSON list helpers). */
 function wants_ajax(): bool
 {
     return isset($_GET['ajax']) && (string) $_GET['ajax'] === '1';
@@ -1077,12 +1220,13 @@ function json_response(array $payload, int $code = 200): void
     exit;
 }
 
-/** Default list page size (hub tables). Logs use 35. */
+/** Default list page size (most tables). */
 function page_size_default(): int
 {
     return 25;
 }
 
+/** Logs list page size. */
 function page_size_logs(): int
 {
     return 35;
@@ -1136,6 +1280,7 @@ function paginate_sql(string $countSql, string $dataSql, array $params, int $per
     return [$rows, $pg];
 }
 
+/** Next-page URL for optional AJAX row fetch (?ajax=1). Empty if last page. */
 function pagination_next_url(array $pg, array $keepQuery = []): string
 {
     if ((int) ($pg['page'] ?? 1) >= (int) ($pg['pages'] ?? 1)) {
@@ -1148,6 +1293,7 @@ function pagination_next_url(array $pg, array $keepQuery = []): string
     return '?' . http_build_query($keepQuery);
 }
 
+/** JSON payload used by optional AJAX list helpers. */
 function lazy_ajax_payload(array $pg, string $rowsHtml, array $keepQuery = []): array
 {
     $page = (int) $pg['page'];
@@ -1167,7 +1313,18 @@ function lazy_ajax_payload(array $pg, string $rowsHtml, array $keepQuery = []): 
 }
 
 /**
- * Render lazy-load footer (Load more + scroll sentinel) using shared loader UI in JS.
+ * Build ?page=N URL while keeping current filters.
+ */
+function pagination_page_url(array $keepQuery, int $page): string
+{
+    $q = $keepQuery;
+    unset($q['ajax']);
+    $q['page'] = max(1, $page);
+    return '?' . http_build_query($q);
+}
+
+/**
+ * Render pagination footer with Prev / Next (+ page numbers).
  */
 function render_pagination(array $pg, array $keepQuery = []): void
 {
@@ -1184,30 +1341,55 @@ function render_pagination(array $pg, array $keepQuery = []): void
     $to = (int) $pg['to'];
     $total = (int) $pg['total'];
     $per = (int) $pg['per_page'];
-    $hasMore = $page < $pages;
 
-    $nextQuery = $keepQuery;
-    $nextQuery['page'] = $page + 1;
-    $nextQuery['ajax'] = '1';
-    $nextUrl = '?' . http_build_query($nextQuery);
+    $prevPage = $page > 1 ? $page - 1 : 0;
+    $nextPage = $page < $pages ? $page + 1 : 0;
+
+    // Show a small window of page numbers around current
+    $window = 2;
+    $start = max(1, $page - $window);
+    $end = min($pages, $page + $window);
     ?>
-    <div class="pagination js-lazy-pager"
+    <div class="pagination"
          data-page="<?= (int) $page ?>"
          data-pages="<?= (int) $pages ?>"
          data-total="<?= (int) $total ?>"
-         data-per-page="<?= (int) $per ?>"
-         data-next-url="<?= $hasMore ? e($nextUrl) : '' ?>">
-        <div class="pagination-info js-lazy-info">
-            Showing <span class="js-lazy-from"><?= $from ?></span>–<span class="js-lazy-to"><?= $to ?></span>
-            of <span class="js-lazy-total"><?= $total ?></span>
-            (<?= $per ?> per page<?= $hasMore ? ' · scroll or Load more' : '' ?>)
+         data-per-page="<?= (int) $per ?>">
+        <div class="pagination-info">
+            Showing <?= $from ?>–<?= $to ?> of <?= $total ?>
+            (<?= $per ?> per page · page <?= $page ?>/<?= $pages ?>)
         </div>
-        <?php if ($hasMore): ?>
         <div class="pagination-links">
-            <button type="button" class="btn js-lazy-more">Load more</button>
+            <?php if ($prevPage): ?>
+                <a class="btn btn-secondary pagination-nav" href="<?= e(pagination_page_url($keepQuery, $prevPage)) ?>">← Prev</a>
+            <?php else: ?>
+                <span class="pagination-nav is-disabled">← Prev</span>
+            <?php endif; ?>
+
+            <?php if ($start > 1): ?>
+                <a href="<?= e(pagination_page_url($keepQuery, 1)) ?>">1</a>
+                <?php if ($start > 2): ?><span class="pagination-ellipsis">…</span><?php endif; ?>
+            <?php endif; ?>
+
+            <?php for ($i = $start; $i <= $end; $i++): ?>
+                <?php if ($i === $page): ?>
+                    <span class="pagination-current"><?= $i ?></span>
+                <?php else: ?>
+                    <a href="<?= e(pagination_page_url($keepQuery, $i)) ?>"><?= $i ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+
+            <?php if ($end < $pages): ?>
+                <?php if ($end < $pages - 1): ?><span class="pagination-ellipsis">…</span><?php endif; ?>
+                <a href="<?= e(pagination_page_url($keepQuery, $pages)) ?>"><?= $pages ?></a>
+            <?php endif; ?>
+
+            <?php if ($nextPage): ?>
+                <a class="btn btn-secondary pagination-nav" href="<?= e(pagination_page_url($keepQuery, $nextPage)) ?>">Next →</a>
+            <?php else: ?>
+                <span class="pagination-nav is-disabled">Next →</span>
+            <?php endif; ?>
         </div>
-        <div class="lazy-sentinel js-lazy-sentinel" aria-hidden="true"></div>
-        <?php endif; ?>
     </div>
     <?php
 }

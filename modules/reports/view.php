@@ -7,6 +7,7 @@
 $pageTitle = 'Report';
 $currentPage = 'reports';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('reports.view');
 require_once __DIR__ . '/_data.php';
 
 $type = $_GET['type'] ?? '';
@@ -28,7 +29,9 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
-    <a class="btn" href="<?= e(base_url('modules/reports/export.php?type=' . urlencode($type))) ?>">Excel (CSV)</a>
+    <?php if (can('reports.export')): ?>
+        <a class="btn" href="<?= e(base_url('modules/reports/export.php?type=' . urlencode($type))) ?>">Excel (CSV)</a>
+    <?php endif; ?>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/reports/index.php')) ?>">All Reports</a>
 </div>
 

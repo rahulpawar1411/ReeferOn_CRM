@@ -9,7 +9,7 @@
  * Works anytime after upload — even after you leave the upload page.
  */
 require_once __DIR__ . '/../../includes/functions.php';
-require_login();
+require_perm('onboarding.view');
 
 $id = (int) ($_GET['id'] ?? 0);
 $mode = strtolower(trim((string) ($_GET['mode'] ?? 'view')));

@@ -28,7 +28,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <h2>Roles &amp; access</h2>
     <p class="step-note">
         Defaults for <strong>Admin</strong>, <strong>Salesperson</strong>, <strong>Management</strong>, <strong>Viewer</strong>.
-        <strong>Edit Checkboxes</strong> pe jaake role dropdown se choose karo.
+        Open <strong>Edit Checkboxes</strong> and choose a role from the dropdown.
     </p>
 
     <?php if (!$rows): ?>

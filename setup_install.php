@@ -44,7 +44,7 @@ try {
         }
     }
 
-    echo "OK – Database reeferon_crm installed.\n";
+    echo "OK – Database crm installed.\n";
     echo "Open: http://localhost/CRM/\n";
     echo "Create prospect: http://localhost/CRM/modules/prospects/create.php\n";
     echo "You can delete setup_install.php after install.\n";

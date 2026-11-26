@@ -2,11 +2,13 @@
 /**
  * Notifications list
  *
- * Unread / all alerts, plus live counts for due follow-ups and approvals.
+ * Simple inbox for CRM events (unread / all). Prev / Next pages.
+ * Follow-up and approval counts stay on the Dashboard — not repeated here.
  */
 $pageTitle = 'Notifications';
 $currentPage = 'notifications';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('notifications.view');
 
 $tab = $_GET['tab'] ?? 'unread';
 if (!in_array($tab, ['unread', 'all'], true)) {
@@ -24,40 +26,7 @@ if (isset($_GET['mark_all']) && $_GET['mark_all'] === '1') {
     redirect(base_url('modules/notifications/index.php?tab=all'));
 }
 
-$liveAlerts = [];
 try {
-    $pdo = db();
-    $fuToday = (int) $pdo->query("SELECT COUNT(*) FROM followups WHERE status = 'Open' AND followup_date = CURDATE()")->fetchColumn();
-    $fuOver = (int) $pdo->query("SELECT COUNT(*) FROM followups WHERE status = 'Open' AND followup_date < CURDATE()")->fetchColumn();
-    $pending = (int) $pdo->query(
-        "SELECT COUNT(*) FROM onboarding_approvals a
-         JOIN onboarding o ON o.id = a.onboarding_pk
-         WHERE a.department = 'Admin' AND a.status = 'Pending'
-           AND o.overall_status IN ('Submitted','In Approval')"
-    )->fetchColumn();
-
-    if ($fuToday > 0) {
-        $liveAlerts[] = [
-            'title' => 'Follow-ups Due Today',
-            'message' => $fuToday . ' open follow-up(s) due today.',
-            'link' => base_url('modules/followups/index.php'),
-        ];
-    }
-    if ($fuOver > 0) {
-        $liveAlerts[] = [
-            'title' => 'Overdue Follow-ups',
-            'message' => $fuOver . ' open follow-up(s) overdue.',
-            'link' => base_url('modules/followups/index.php'),
-        ];
-    }
-    if ($pending > 0) {
-        $liveAlerts[] = [
-            'title' => 'Admin Approval Pending',
-            'message' => $pending . ' onboarding(s) waiting for Admin.',
-            'link' => base_url('modules/approvals/index.php'),
-        ];
-    }
-
     $where = ($tab === 'unread') ? ' WHERE is_read = 0' : '';
     [$rows, $pg] = paginate_sql(
         'SELECT COUNT(*) FROM notifications' . $where,
@@ -77,12 +46,14 @@ $keepQuery = ['tab' => $tab];
 $renderNotificationRows = static function (array $rows): string {
     ob_start();
     foreach ($rows as $r): ?>
-                <tr>
+                <tr class="<?= ((int) $r['is_read'] === 0) ? 'is-unread' : '' ?>">
                     <td><?= e($r['created_at']) ?></td>
-                    <td><?= e($r['event_type']) ?></td>
-                    <td><?= e($r['title']) ?></td>
-                    <td><?= e($r['message']) ?></td>
-                    <td><?= ((int) $r['is_read'] === 1) ? 'Yes' : 'No' ?></td>
+                    <td>
+                        <strong><?= e($r['title']) ?></strong>
+                        <?php if (!empty($r['message'])): ?>
+                            <div class="muted"><?= e($r['message']) ?></div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if (!empty($r['link_url'])): ?>
                             <a href="<?= e(base_url('modules/notifications/open.php?id=' . $r['id'])) ?>">Open</a>
@@ -102,49 +73,29 @@ if (wants_ajax()) {
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<div class="toolbar">
-    <a class="btn btn-secondary" href="?tab=unread">Unread</a>
-    <a class="btn btn-secondary" href="?tab=all">All</a>
-    <a class="btn" href="?mark_all=1">Mark all read</a>
-</div>
-
 <div class="card">
-    <h2>Live Alerts</h2>
-    <p class="step-note">Computed from current data (follow-ups + pending Admin approvals).</p>
-    <?php if (!$liveAlerts): ?>
-        <div class="empty">No live alerts right now.</div>
-    <?php else: ?>
-        <table class="data">
-            <tr><th>Alert</th><th>Detail</th><th></th></tr>
-            <?php foreach ($liveAlerts as $a): ?>
-                <tr>
-                    <td><strong><?= e($a['title']) ?></strong></td>
-                    <td><?= e($a['message']) ?></td>
-                    <td><a href="<?= e($a['link']) ?>">Open</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
-</div>
+    <h2>Notifications</h2>
+    <p class="step-note">
+        Important CRM events only (stage change, submit, reject, customer code, etc.).
+        Today’s follow-ups / pending approvals are on the <strong>Dashboard</strong> — not repeated here.
+    </p>
 
-<div class="card">
-    <h2>Notification History</h2>
-    <div class="tabs">
-        <a class="<?= $tab === 'unread' ? 'active' : '' ?>" href="?tab=unread">Unread</a>
-        <a class="<?= $tab === 'all' ? 'active' : '' ?>" href="?tab=all">All</a>
+    <div class="toolbar">
+        <a class="btn <?= $tab === 'unread' ? '' : 'btn-secondary' ?>" href="?tab=unread">Unread</a>
+        <a class="btn <?= $tab === 'all' ? '' : 'btn-secondary' ?>" href="?tab=all">All</a>
+        <?php if ($tab === 'unread'): ?>
+            <a class="btn btn-secondary" href="?mark_all=1">Mark all read</a>
+        <?php endif; ?>
     </div>
 
     <?php if (!$rows): ?>
-        <div class="empty">No <?= e($tab) ?> notifications yet. Events like Commercial Approved, submit, reject, and customer code create them.</div>
+        <div class="empty">No <?= e($tab) ?> notifications.</div>
     <?php else: ?>
-        <table class="data" data-lazy="1">
+        <table class="data">
             <thead>
             <tr>
                 <th>When</th>
-                <th>Type</th>
-                <th>Title</th>
-                <th>Message</th>
-                <th>Read</th>
+                <th>Notification</th>
                 <th></th>
             </tr>
             </thead>

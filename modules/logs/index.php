@@ -43,7 +43,15 @@ if ($to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
     $params[] = $to . ' 23:59:59';
 }
 
+// Excel export: From + To date required, max 5000 rows
 if ($export) {
+    $dateErr = export_date_range_error($from, $to);
+    if ($dateErr !== null) {
+        flash('error', $dateErr);
+        redirect(base_url('modules/logs/index.php?' . http_build_query(array_filter([
+            'module' => $module, 'action' => $action, 'q' => $q, 'from' => $from, 'to' => $to,
+        ], static fn($v) => $v !== '' && $v !== null))));
+    }
     $stmt = db()->prepare('SELECT * FROM audit_logs' . $where . ' ORDER BY id DESC LIMIT 5000');
     $stmt->execute($params);
     $exportRows = $stmt->fetchAll();
@@ -124,7 +132,7 @@ require_once __DIR__ . '/../../includes/header.php';
     </p>
 
     <?php
-    $filterActive = ($module !== '' || $action !== '' || $from !== '' || $to !== '' || $q !== '');
+    $filterActive = ($module !== '' || $action !== '' || $from !== '' || $to !== '');
     $excelUrl = base_url('modules/logs/index.php') . '?' . http_build_query(array_filter([
         'module' => $module,
         'action' => $action,
@@ -133,10 +141,19 @@ require_once __DIR__ . '/../../includes/header.php';
         'q' => $q,
         'export' => '1',
     ], static fn($v) => $v !== '' && $v !== null));
-    $leading = '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
-    filter_flip_start('Logs Filters', $filterActive, base_url('modules/logs/index.php'), $leading);
+    $leading = '<a class="btn btn-secondary js-export-excel" href="' . e($excelUrl) . '"'
+        . ' data-from-param="from" data-to-param="to"'
+        . ' title="Select From & To date in Filters first">Excel (CSV)</a>';
+    filter_flip_start(
+        'Logs Filters',
+        $filterActive,
+        base_url('modules/logs/index.php'),
+        $leading,
+        ['name' => 'q', 'value' => $q, 'placeholder' => 'Search record / action / user']
+    );
     ?>
     <form class="filter-flip-form" method="get" action="">
+        <?php if ($q !== ''): ?><input type="hidden" name="q" value="<?= e($q) ?>"><?php endif; ?>
         <div class="field">
             <label>Module</label>
             <select name="module">
@@ -156,17 +173,14 @@ require_once __DIR__ . '/../../includes/header.php';
             </select>
         </div>
         <div class="field">
-            <label>From</label>
+            <label>From date <span class="required">*</span> (for Excel)</label>
             <input type="date" name="from" value="<?= e($from) ?>">
         </div>
         <div class="field">
-            <label>To</label>
+            <label>To date <span class="required">*</span> (for Excel)</label>
             <input type="date" name="to" value="<?= e($to) ?>">
         </div>
-        <div class="field">
-            <label>Search</label>
-            <input type="text" name="q" value="<?= e($q) ?>" placeholder="Record / action / user">
-        </div>
+        <p class="step-note" style="margin:0 0 8px">Excel export needs <strong>From</strong> and <strong>To</strong> dates.</p>
         <div class="filter-flip-actions">
             <button type="submit" class="btn">Apply Filters</button>
         </div>

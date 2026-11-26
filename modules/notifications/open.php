@@ -5,6 +5,7 @@
  * Marks one notification as read, then redirects to its linked page.
  */
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('notifications.view');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM notifications WHERE id = ?');

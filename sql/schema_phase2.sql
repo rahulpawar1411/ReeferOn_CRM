@@ -1,7 +1,7 @@
 -- ReeferON CRM - Phase 2: Follow-ups
--- Run after schema.sql (database reeferon_crm must exist)
+-- Run after schema.sql (database crm must exist)
 
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS followups (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

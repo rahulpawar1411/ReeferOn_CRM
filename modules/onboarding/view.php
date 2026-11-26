@@ -2,11 +2,12 @@
 /**
  * View onboarding
  *
- * Shows customer details, documents, and Admin approval status.
+ * Customer details, document checklist (View / Download / Clear), and Admin approval.
  */
 $pageTitle = 'View Onboarding';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('onboarding.view');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM onboarding WHERE id = ?');
@@ -32,7 +33,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="toolbar">
     <a class="btn" href="<?= e(base_url('modules/onboarding/edit.php?id=' . $o['id'])) ?>">Edit Details</a>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/onboarding/index.php')) ?>">Back to List</a>
+    <a class="btn btn-secondary btn-back-list" href="<?= e(base_url('modules/onboarding/index.php')) ?>">Back to List</a>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/view.php?id=' . $o['prospect_pk'])) ?>">Open Prospect</a>
 </div>
 
@@ -112,7 +113,7 @@ require_once __DIR__ . '/../../includes/header.php';
                     <?php endif; ?>
                     <?php if (can('onboarding.delete_docs') && !empty($d['file_path']) && $o['overall_status'] !== 'Approved'): ?>
                         ·
-                        <a class="link-danger" href="<?= e(base_url('modules/onboarding/delete_doc.php?id=' . $d['id'])) ?>">Delete</a>
+                        <a class="link-danger" href="<?= e(base_url('modules/onboarding/delete_doc.php?id=' . $d['id'])) ?>">Clear</a>
                     <?php endif; ?>
                 </td>
             </tr>

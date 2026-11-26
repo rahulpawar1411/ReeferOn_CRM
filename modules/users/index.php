@@ -53,7 +53,9 @@ require_once __DIR__ . '/../../includes/header.php';
                 <td>
                     <a href="<?= e(base_url('modules/users/edit.php?id=' . $r['id'])) ?>">Edit</a>
                     <?php if (($r['status'] ?? '') !== 'Inactive' && (int) $r['id'] !== (int) current_user()['id']): ?>
-                        | <a class="link-danger" href="<?= e(base_url('modules/users/delete.php?id=' . $r['id'])) ?>">Delete</a>
+                        | <a class="link-danger" href="<?= e(base_url('modules/users/delete.php?id=' . $r['id'])) ?>">Inactive</a>
+                    <?php elseif (($r['status'] ?? '') === 'Inactive'): ?>
+                        | <a class="link-success" href="<?= e(base_url('modules/users/activate.php?id=' . $r['id'])) ?>">Active</a>
                     <?php endif; ?>
                 </td>
             </tr>

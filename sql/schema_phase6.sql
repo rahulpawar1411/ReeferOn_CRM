@@ -1,5 +1,5 @@
 -- ReeferON CRM - Phase 6: Notifications
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS notifications (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

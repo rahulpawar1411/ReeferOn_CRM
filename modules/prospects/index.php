@@ -2,7 +2,7 @@
 /**
  * Prospects list
  *
- * Shows all sales leads with search + Filters drawer + Excel export.
+ * Sales leads with search, Filters drawer, Excel export, and Prev / Next pages.
  * Permission: prospects.view
  */
 $pageTitle = 'Prospects';
@@ -11,12 +11,14 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_perm('prospects.view');
 
 $q = trim($_GET['q'] ?? '');
+$status = trim($_GET['status'] ?? '');
 $stage = trim($_GET['stage'] ?? '');
 $business_type = trim($_GET['business_type'] ?? '');
 $city = trim($_GET['city'] ?? '');
 $date_from = trim($_GET['date_from'] ?? '');
 $date_to = trim($_GET['date_to'] ?? '');
 $export = isset($_GET['export']) && $_GET['export'] === '1';
+$statusOptions = ['Active', 'Inactive'];
 
 // Build list filters from GET params
 $where = ' WHERE 1=1';
@@ -29,6 +31,10 @@ if ($q !== '') {
     )';
     $like = '%' . $q . '%';
     array_push($params, $like, $like, $like, $like, $like);
+}
+if ($status !== '' && in_array($status, $statusOptions, true)) {
+    $where .= ' AND status = ?';
+    $params[] = $status;
 }
 if ($stage !== '') {
     $where .= ' AND pipeline_stage = ?';
@@ -43,16 +49,34 @@ if ($city !== '') {
     $params[] = '%' . $city . '%';
 }
 if ($date_from !== '') {
-    $where .= ' AND lead_creation_date >= ?';
-    $params[] = $date_from;
+    $fromDt = DateTime::createFromFormat('Y-m-d', $date_from);
+    if ($fromDt && $fromDt->format('Y-m-d') === $date_from) {
+        $where .= ' AND lead_creation_date >= ?';
+        $params[] = $date_from;
+    } else {
+        $date_from = '';
+    }
 }
 if ($date_to !== '') {
-    $where .= ' AND lead_creation_date <= ?';
-    $params[] = $date_to;
+    $toDt = DateTime::createFromFormat('Y-m-d', $date_to);
+    if ($toDt && $toDt->format('Y-m-d') === $date_to) {
+        $where .= ' AND lead_creation_date <= ?';
+        $params[] = $date_to;
+    } else {
+        $date_to = '';
+    }
 }
 
-// Excel export (current filters, max 5000 rows)
+// Excel export: From + To date required (lead_creation_date), max 5000 rows
 if ($export) {
+    $dateErr = export_date_range_error($date_from, $date_to);
+    if ($dateErr !== null) {
+        flash('error', $dateErr);
+        redirect(base_url('modules/prospects/index.php?' . http_build_query(array_filter([
+            'q' => $q, 'status' => $status, 'stage' => $stage, 'business_type' => $business_type,
+            'city' => $city, 'date_from' => $date_from, 'date_to' => $date_to,
+        ], static fn($v) => $v !== '' && $v !== null))));
+    }
     $stmt = db()->prepare('SELECT * FROM prospects' . $where . ' ORDER BY id DESC LIMIT 5000');
     $stmt->execute($params);
     $exportRows = $stmt->fetchAll();
@@ -105,6 +129,7 @@ $renderProspectRows = static function (array $rows): string {
                     <td><?= e($row['city'] ?? '-') ?></td>
                     <td><?= e($row['service_required']) ?></td>
                     <td><span class="badge"><?= e($row['pipeline_stage']) ?></span></td>
+                    <td><span class="badge"><?= e($row['status'] ?? 'Active') ?></span></td>
                     <td><?= e($row['next_followup_date'] ?? '-') ?></td>
                     <td>
                         <a href="<?= e(base_url('modules/prospects/view.php?id=' . $row['id'])) ?>">View</a>
@@ -112,7 +137,9 @@ $renderProspectRows = static function (array $rows): string {
                             | <a href="<?= e(base_url('modules/prospects/edit.php?id=' . $row['id'])) ?>">Edit</a>
                         <?php endif; ?>
                         <?php if (can('prospects.delete') && ($row['status'] ?? '') !== 'Inactive'): ?>
-                            | <a class="link-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $row['id'])) ?>">Delete</a>
+                            | <a class="link-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $row['id'])) ?>">Inactive</a>
+                        <?php elseif (can('prospects.delete') && ($row['status'] ?? '') === 'Inactive'): ?>
+                            | <a class="link-success" href="<?= e(base_url('modules/prospects/activate.php?id=' . $row['id'])) ?>">Active</a>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -130,9 +157,10 @@ require_once __DIR__ . '/../../includes/header.php';
 <div class="card">
     <p class="step-note"><strong>Step 1 – Prospects list:</strong> All sales leads are listed here. Add a new lead with <em>+ New Prospect</em>. Open a lead to update stage or follow-ups. <?= (int) page_size_default() ?> rows per page.</p>
     <?php
-    $filterActive = ($q !== '' || $stage !== '' || $business_type !== '' || $city !== '' || $date_from !== '' || $date_to !== '');
+    $filterActive = ($status !== '' || $stage !== '' || $business_type !== '' || $city !== '' || $date_from !== '' || $date_to !== '');
     $excelUrl = base_url('modules/prospects/index.php') . '?' . http_build_query(array_filter([
         'q' => $q,
+        'status' => $status,
         'stage' => $stage,
         'business_type' => $business_type,
         'city' => $city,
@@ -141,13 +169,27 @@ require_once __DIR__ . '/../../includes/header.php';
         'export' => '1',
     ], static fn($v) => $v !== '' && $v !== null));
     $leading = '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a> '
-        . '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
-    filter_flip_start('Prospect Filters', $filterActive, base_url('modules/prospects/index.php'), $leading);
+        . '<a class="btn btn-secondary js-export-excel" href="' . e($excelUrl) . '"'
+        . ' data-from-param="date_from" data-to-param="date_to"'
+        . ' title="Select From & To date in Filters first">Excel (CSV)</a>';
+    filter_flip_start(
+        'Prospect Filters',
+        $filterActive,
+        base_url('modules/prospects/index.php'),
+        $leading,
+        ['name' => 'q', 'value' => $q, 'placeholder' => 'Search ID / company / mobile / email']
+    );
     ?>
     <form method="get" class="filter-flip-form" action="">
+        <?php if ($q !== ''): ?><input type="hidden" name="q" value="<?= e($q) ?>"><?php endif; ?>
         <div class="field">
-            <label>Search</label>
-            <input type="text" name="q" value="<?= e($q) ?>" placeholder="ID / company / mobile / email">
+            <label>Status</label>
+            <select name="status">
+                <option value="">All</option>
+                <?php foreach ($statusOptions as $s): ?>
+                    <option value="<?= e($s) ?>" <?= $status === $s ? 'selected' : '' ?>><?= e($s) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <div class="field">
             <label>Stage</label>
@@ -172,13 +214,14 @@ require_once __DIR__ . '/../../includes/header.php';
             <input type="text" name="city" value="<?= e($city) ?>">
         </div>
         <div class="field">
-            <label>From</label>
+            <label>From date <span class="required">*</span> (for Excel)</label>
             <input type="date" name="date_from" value="<?= e($date_from) ?>">
         </div>
         <div class="field">
-            <label>To</label>
+            <label>To date <span class="required">*</span> (for Excel)</label>
             <input type="date" name="date_to" value="<?= e($date_to) ?>">
         </div>
+        <p class="step-note" style="margin:0 0 8px">Excel export needs <strong>From</strong> and <strong>To</strong> dates (lead creation date).</p>
         <div class="filter-flip-actions">
             <button class="btn" type="submit">Apply Filters</button>
             <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Reset</a>
@@ -202,6 +245,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <th>City</th>
                 <th>Service</th>
                 <th>Stage</th>
+                <th>Status</th>
                 <th>Next Follow-up</th>
                 <th>Actions</th>
             </tr>

@@ -3,10 +3,12 @@
  * Dashboard (home page after login)
  *
  * Shows:
- * - Global Search (with live suggestions while typing)
+ * - Global Search (live suggestions while typing)
  * - Management Summary counts (click a count to open that list)
  * - Salesperson-wise active leads
  * - Recently created customers
+ *
+ * Follow-up / approval counts live here (not a separate Live Alerts page).
  */
 $pageTitle = 'Dashboard';
 $currentPage = 'dashboard';

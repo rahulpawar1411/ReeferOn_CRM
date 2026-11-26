@@ -8,6 +8,7 @@
 $pageTitle = 'Edit Customer';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('customers.edit');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM customers WHERE id = ?');

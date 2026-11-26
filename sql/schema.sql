@@ -1,11 +1,11 @@
 -- ReeferON CRM - Phase 0 + Phase 1 Schema
 -- Import this file in phpMyAdmin or MySQL CLI
 
-CREATE DATABASE IF NOT EXISTS reeferon_crm
+CREATE DATABASE IF NOT EXISTS crm
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE reeferon_crm;
+USE crm;
 
 -- -----------------------------------------------------
 -- Users (structure ready; login wired in Phase 7)
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   KEY idx_audit_module_record (module, record_id)
 ) ENGINE=InnoDB;
 -- ReeferON CRM - Phase 3: Onboarding + Documents (+ approval rows ready for Phase 4)
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS onboarding (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS onboarding_approvals (
 ) ENGINE=InnoDB;
 
 -- ReeferON CRM - Phase 4: Customer Master (after final approval)
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS customers (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -298,7 +298,7 @@ CREATE TABLE IF NOT EXISTS customers (
 
 
 -- ReeferON CRM - Phase 6: Notifications
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS notifications (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

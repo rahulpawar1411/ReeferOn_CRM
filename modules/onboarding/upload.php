@@ -7,6 +7,7 @@
 $pageTitle = 'Upload Document';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('onboarding.edit');
 
 $docId = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare(

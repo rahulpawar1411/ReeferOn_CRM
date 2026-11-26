@@ -4,10 +4,14 @@
  * Loaded on every page (see includes/footer.php).
  * Handles:
  * - Full-page loading overlay
- * - Lazy "Load more" tables
  * - India +91 phone inputs (10 digits only)
  * - Right-side Filters drawer
  * - Dashboard Global Search live suggestions
+ * - Inactive / Active confirm popup (type the confirm word)
+ * - Top-right success toasts
+ *
+ * List pages use server-side Prev / Next pagination (PHP).
+ * Optional data-lazy tables can still append rows via AJAX.
  */
 (function () {
   var loaderEl = null;
@@ -75,7 +79,7 @@
     });
   }
 
-  // --- Lazy tables (Load more / infinite scroll) ---
+  // --- Optional lazy tables (data-lazy="1"); most lists use Prev / Next ---
   function updatePager(pager, data) {
     pager.dataset.page = String(data.page);
     pager.dataset.pages = String(data.pages);
@@ -131,7 +135,7 @@
         updatePager(pager, data);
       })
       .catch(function () {
-        // Keep UI usable; user can click Load more again
+        // Keep UI usable so the user can retry
         alert('Could not load more rows. Please try again.');
       })
       .finally(function () {
@@ -258,6 +262,117 @@
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeFilterFlip();
+    });
+  }
+
+  // Excel: require From + To dates in the export URL (set via Filters → Apply)
+  function bindExportExcel() {
+    document.querySelectorAll('.js-export-excel').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var fromParam = a.getAttribute('data-from-param') || 'date_from';
+        var toParam = a.getAttribute('data-to-param') || 'date_to';
+        var href;
+        try {
+          href = new URL(a.href, window.location.origin);
+        } catch (err) {
+          return;
+        }
+        var from = (href.searchParams.get(fromParam) || '').trim();
+        var to = (href.searchParams.get(toParam) || '').trim();
+        if (!from || !to) {
+          e.preventDefault();
+          alert('Select From and To dates in Filters, click Apply Filters, then click Excel (CSV).');
+          var openBtn = document.querySelector('.js-filter-open');
+          if (openBtn) {
+            openFilterFlip(openBtn.getAttribute('data-filter-target'));
+          }
+        }
+      });
+    });
+  }
+
+  // Live search beside Filters button — typing updates ?q= and reloads list
+  function bindLiveSearch() {
+    var FOCUS_KEY = 'crmLiveSearchFocus';
+
+    // After reload: put cursor back in the search box
+    try {
+      var saved = sessionStorage.getItem(FOCUS_KEY);
+      if (saved) {
+        sessionStorage.removeItem(FOCUS_KEY);
+        var info = JSON.parse(saved);
+        var restore = document.querySelector(
+          '.js-live-search[data-param="' + (info.param || 'q') + '"]'
+        );
+        if (restore) {
+          // Keep what user typed if server echoed a trimmed value
+          if (typeof info.value === 'string') {
+            restore.value = info.value;
+          }
+          restore.focus();
+          var pos = typeof info.caret === 'number' ? info.caret : restore.value.length;
+          try {
+            restore.setSelectionRange(pos, pos);
+          } catch (err) {
+            // some input types may not support selection
+          }
+        }
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+
+    document.querySelectorAll('.js-live-search').forEach(function (input) {
+      var timer = null;
+      var param = input.getAttribute('data-param') || 'q';
+      var lastSent = (input.value || '').trim();
+
+      function applySearch() {
+        var raw = input.value || '';
+        var val = raw.trim();
+        // Skip reload if search text did not change
+        if (val === lastSent) {
+          return;
+        }
+        lastSent = val;
+
+        var url = new URL(window.location.href);
+        if (val === '') {
+          url.searchParams.delete(param);
+        } else {
+          url.searchParams.set(param, val);
+        }
+        url.searchParams.delete('page'); // reset to first page on new search
+
+        try {
+          sessionStorage.setItem(
+            FOCUS_KEY,
+            JSON.stringify({
+              param: param,
+              value: raw,
+              caret: input.selectionStart != null ? input.selectionStart : raw.length,
+            })
+          );
+        } catch (err) {
+          // ignore
+        }
+
+        showLoader('Searching…');
+        window.location.href = url.toString();
+      }
+
+      input.addEventListener('input', function () {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(applySearch, 400);
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (timer) clearTimeout(timer);
+          applySearch();
+        }
+      });
     });
   }
 
@@ -426,11 +541,12 @@
     });
   }
 
-  // --- Top-right toast (5s) with Undo acknowledgement for create/edit/delete ---
+  // --- Top-right toast (5s); Undo is acknowledgement only (no DB reverse) ---
   function toastTitles(action) {
     if (action === 'create') return 'Created';
     if (action === 'edit') return 'Updated';
-    if (action === 'delete') return 'Deleted';
+    if (action === 'delete') return 'Inactive'; // flash action key stays "delete"
+    if (action === 'activate') return 'Active';
     return 'Saved';
   }
 
@@ -440,7 +556,7 @@
 
     var action = (opts && opts.action) || '';
     var message = (opts && opts.message) || '';
-    var showUndo = action === 'create' || action === 'edit' || action === 'delete';
+    var showUndo = action === 'create' || action === 'edit' || action === 'delete' || action === 'activate';
 
     var el = document.createElement('div');
     el.className = 'toast' + (action ? ' toast-action-' + action : '');
@@ -497,7 +613,7 @@
     if (undoBtn) {
       undoBtn.addEventListener('click', function () {
         clearTimeout(timer);
-        // Acknowledgement only — does not reverse create/edit/delete in DB
+        // Acknowledgement only — does not reverse create/edit/Inactive in DB
         closeToast(true);
       });
     }
@@ -522,12 +638,13 @@
   window.CRM = window.CRM || {};
   window.CRM.showToast = showToast;
 
-  // --- Delete popup: must type "delete" to enable the Delete button ---
+  // --- Inactive popup: must type confirm word (default "inactive") ---
   function bindDeleteConfirm() {
     var modal = document.querySelector('.js-delete-modal');
     if (!modal) return;
 
     document.body.classList.add('delete-modal-open');
+    var confirmWord = (modal.getAttribute('data-confirm-word') || 'inactive').toLowerCase();
 
     function closeDeleteModal() {
       var url = modal.getAttribute('data-cancel-url') || '';
@@ -572,7 +689,7 @@
       if (!input || !btn) return;
 
       function sync() {
-        var ok = (input.value || '').trim().toLowerCase() === 'delete';
+        var ok = (input.value || '').trim().toLowerCase() === confirmWord;
         btn.disabled = !ok;
       }
 
@@ -581,12 +698,12 @@
       sync();
 
       form.addEventListener('submit', function (e) {
-        if ((input.value || '').trim().toLowerCase() !== 'delete') {
+        if ((input.value || '').trim().toLowerCase() !== confirmWord) {
           e.preventDefault();
           input.focus();
           return;
         }
-        showLoader('Deleting…');
+        showLoader('Saving…');
       });
     });
   }
@@ -597,6 +714,8 @@
     bindLazyTables();
     bindPhoneInputs();
     bindFilterFlip();
+    bindExportExcel();
+    bindLiveSearch();
     bindGlobalSearchSuggest();
     bindDeleteConfirm();
     bindToasts();

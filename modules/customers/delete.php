@@ -1,9 +1,9 @@
 <?php
 /**
- * Soft-delete customer
+ * Make customer Inactive
  *
- * Sets status = Inactive. Customer Code is kept. Permission: customers.delete
- * Opens a centered popup — user must type "delete" to confirm.
+ * Soft status change only. Customer Code kept. Permission: customers.delete
+ * Popup: type "inactive" to confirm.
  */
 require_once __DIR__ . '/../../includes/functions.php';
 require_perm('customers.delete');
@@ -27,12 +27,12 @@ $cancel = base_url('modules/customers/view.php?id=' . $id);
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!delete_confirm_ok($_POST['confirm_text'] ?? '')) {
-        $errors[] = 'Please type delete in the box to confirm.';
+    if (!delete_confirm_ok($_POST['confirm_text'] ?? '', 'inactive')) {
+        $errors[] = 'Please type inactive in the box to confirm.';
     } else {
         try {
             soft_delete_customer($id, trim($_POST['reason'] ?? ''));
-            flash('success', $c['customer_code'] . ' marked Inactive (soft delete).', 'delete');
+            flash('success', $c['customer_code'] . ' set to Inactive.', 'delete');
             redirect(base_url('modules/customers/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Delete Customer';
+$pageTitle = 'Inactive Customer';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -53,10 +53,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <?php
 render_delete_confirm_modal([
-    'title' => 'Delete customer?',
-    'message' => 'Status becomes Inactive. Customer Code stays for history. Type delete below to confirm.',
+    'title' => 'Make customer Inactive?',
+    'message' => 'Customer Code stays for history. Status becomes Inactive. Type inactive below to confirm.',
     'item_label' => $c['customer_code'] . ' — ' . $c['customer_name'],
     'cancel_url' => $cancel,
+    'confirm_word' => 'inactive',
+    'confirm_btn' => 'Inactive',
     'hidden' => ['id' => (int) $c['id']],
 ]);
 ?>

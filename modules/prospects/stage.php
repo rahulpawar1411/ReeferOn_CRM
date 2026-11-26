@@ -7,6 +7,7 @@
 $pageTitle = 'Update Pipeline Stage';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('prospects.stage');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM prospects WHERE id = ?');

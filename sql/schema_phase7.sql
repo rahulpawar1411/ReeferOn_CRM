@@ -1,5 +1,5 @@
 -- ReeferON CRM - Phase 7: Roles (checkbox permissions) + Auth prep
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS roles (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

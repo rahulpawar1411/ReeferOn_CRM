@@ -1,5 +1,5 @@
 -- ReeferON CRM - Phase 4: Customer Master (after final approval)
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS customers (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

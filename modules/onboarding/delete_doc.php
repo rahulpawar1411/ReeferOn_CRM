@@ -1,10 +1,9 @@
 <?php
 /**
- * Clear / delete an uploaded document file
+ * Clear an uploaded document file
  *
- * Removes the file and resets the document row to Pending.
- * Permission: onboarding.delete_docs (Admin by default)
- * Opens a centered popup — user must type "delete" to confirm.
+ * Resets document row to Pending. Permission: onboarding.delete_docs
+ * Popup: type "clear" to confirm.
  */
 require_once __DIR__ . '/../../includes/functions.php';
 require_perm('onboarding.delete_docs');
@@ -27,15 +26,15 @@ if (!$d) {
 $back = base_url('modules/onboarding/view.php?id=' . (int) $d['onboarding_pk']);
 
 if (empty($d['file_path'])) {
-    flash('error', 'No file to delete.');
+    flash('error', 'No file to clear.');
     redirect($back);
 }
 
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!delete_confirm_ok($_POST['confirm_text'] ?? '')) {
-        $errors[] = 'Please type delete in the box to confirm.';
+    if (!delete_confirm_ok($_POST['confirm_text'] ?? '', 'clear')) {
+        $errors[] = 'Please type clear in the box to confirm.';
     } else {
         try {
             clear_onboarding_document($id);
@@ -47,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Delete Document';
+$pageTitle = 'Clear Document';
 $currentPage = 'onboarding';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -60,10 +59,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <?php
 render_delete_confirm_modal([
-    'title' => 'Delete document file?',
-    'message' => 'File will be cleared and status set to Pending. Type delete below to confirm.',
+    'title' => 'Clear document file?',
+    'message' => 'File will be removed and status set to Pending. Type clear below to confirm.',
     'item_label' => $d['onboarding_id'] . ' — ' . $d['doc_type'] . ' (' . ($d['file_name'] ?? 'file') . ')',
     'cancel_url' => $back,
+    'confirm_word' => 'clear',
+    'confirm_btn' => 'Clear',
     'hidden' => ['id' => (int) $d['id']],
 ]);
 ?>

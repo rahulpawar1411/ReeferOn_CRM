@@ -54,7 +54,7 @@ Project folder: `C:\wamp64\www\CRM`.
 
 ## Database
 
-- Database name: `reeferon_crm`
+- Database name: `crm`
 - Schema file: `sql/schema.sql`
 - Default MySQL user: `root` / empty password (WAMP default)
 

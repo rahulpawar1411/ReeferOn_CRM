@@ -129,7 +129,7 @@ $user = current_user();
         </header>
         <div class="content">
             <?php
-            // Errors stay as page alerts. Success create/edit/delete → top-right toast (JS).
+            // Errors stay as page alerts. Success create/edit/Inactive/Active → top-right toast (JS).
             if ($flash && ($flash['type'] ?? '') === 'error'): ?>
                 <div class="alert alert-error"><?= e($flash['message']) ?></div>
             <?php elseif ($flash && ($flash['type'] ?? '') === 'success' && empty($flash['action'])): ?>

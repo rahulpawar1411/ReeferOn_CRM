@@ -3,7 +3,7 @@
  * Customer Master list
  *
  * Official customers from approved onboarding or added directly.
- * Excel export uses current filters. Permission: customers.view
+ * Search, filters, Excel export, Prev / Next pages. Permission: customers.view
  */
 $pageTitle = 'Customer Master';
 $currentPage = 'customers';
@@ -13,6 +13,8 @@ require_perm('customers.view');
 $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
 $source = $_GET['source'] ?? '';
+$date_from = trim($_GET['date_from'] ?? '');
+$date_to = trim($_GET['date_to'] ?? '');
 $export = isset($_GET['export']) && $_GET['export'] === '1';
 
 // Build list filters from GET params
@@ -31,9 +33,25 @@ if (in_array($source, ['New Onboarding', 'Existing Customer'], true)) {
     $where .= ' AND source = ?';
     $params[] = $source;
 }
+if ($date_from !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_from)) {
+    $where .= ' AND DATE(created_at) >= ?';
+    $params[] = $date_from;
+}
+if ($date_to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_to)) {
+    $where .= ' AND DATE(created_at) <= ?';
+    $params[] = $date_to;
+}
 
-// Excel export (current filters, max 5000 rows)
+// Excel export: From + To date required (created_at), max 5000 rows
 if ($export) {
+    $dateErr = export_date_range_error($date_from, $date_to);
+    if ($dateErr !== null) {
+        flash('error', $dateErr);
+        redirect(base_url('modules/customers/index.php?' . http_build_query(array_filter([
+            'q' => $q, 'status' => $status, 'source' => $source,
+            'date_from' => $date_from, 'date_to' => $date_to,
+        ], static fn($v) => $v !== '' && $v !== null))));
+    }
     $stmt = db()->prepare('SELECT * FROM customers' . $where . ' ORDER BY id DESC LIMIT 5000');
     $stmt->execute($params);
     $exportRows = $stmt->fetchAll();
@@ -87,7 +105,9 @@ $renderCustomerRows = static function (array $rows): string {
                             | <a href="<?= e(base_url('modules/customers/edit.php?id=' . $r['id'])) ?>">Edit</a>
                         <?php endif; ?>
                         <?php if (can('customers.delete') && ($r['status'] ?? '') !== 'Inactive'): ?>
-                            | <a class="link-danger" href="<?= e(base_url('modules/customers/delete.php?id=' . $r['id'])) ?>">Delete</a>
+                            | <a class="link-danger" href="<?= e(base_url('modules/customers/delete.php?id=' . $r['id'])) ?>">Inactive</a>
+                        <?php elseif (can('customers.delete') && ($r['status'] ?? '') === 'Inactive'): ?>
+                            | <a class="link-success" href="<?= e(base_url('modules/customers/activate.php?id=' . $r['id'])) ?>">Active</a>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -104,28 +124,35 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h2>Existing Customer Master</h2>
-    <p class="step-note"><strong>Official customers:</strong> From Admin-approved onboarding, or added directly here. <strong>Delete</strong> = soft Inactive (code + history kept).</p>
+    <p class="step-note"><strong>Official customers:</strong> From Admin-approved onboarding, or added directly here. <strong>Inactive</strong> keeps code + history (no permanent erase).</p>
 
     <?php
-    $filterActive = ($q !== '' || $status !== '' || $source !== '');
+    $filterActive = ($status !== '' || $source !== '' || $date_from !== '' || $date_to !== '');
     $excelUrl = base_url('modules/customers/index.php') . '?' . http_build_query(array_filter([
         'q' => $q,
         'status' => $status,
         'source' => $source,
+        'date_from' => $date_from,
+        'date_to' => $date_to,
         'export' => '1',
     ], static fn($v) => $v !== '' && $v !== null));
     $leading = '';
     if (can('customers.create')) {
         $leading .= '<a class="btn" href="' . e(base_url('modules/customers/create.php')) . '">Add Existing Customer</a> ';
     }
-    $leading .= '<a class="btn btn-secondary" href="' . e($excelUrl) . '">Excel (CSV)</a>';
-    filter_flip_start('Customer Filters', $filterActive, base_url('modules/customers/index.php'), $leading);
+    $leading .= '<a class="btn btn-secondary js-export-excel" href="' . e($excelUrl) . '"'
+        . ' data-from-param="date_from" data-to-param="date_to"'
+        . ' title="Select From & To date in Filters first">Excel (CSV)</a>';
+    filter_flip_start(
+        'Customer Filters',
+        $filterActive,
+        base_url('modules/customers/index.php'),
+        $leading,
+        ['name' => 'q', 'value' => $q, 'placeholder' => 'Search code / name / mobile / GSTIN']
+    );
     ?>
     <form class="filter-flip-form" method="get" action="">
-        <div class="field">
-            <label>Search</label>
-            <input type="text" name="q" value="<?= e($q) ?>" placeholder="Code / name / mobile / GSTIN">
-        </div>
+        <?php if ($q !== ''): ?><input type="hidden" name="q" value="<?= e($q) ?>"><?php endif; ?>
         <div class="field">
             <label>Status</label>
             <select name="status">
@@ -144,6 +171,15 @@ require_once __DIR__ . '/../../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="field">
+            <label>From date <span class="required">*</span> (for Excel)</label>
+            <input type="date" name="date_from" value="<?= e($date_from) ?>">
+        </div>
+        <div class="field">
+            <label>To date <span class="required">*</span> (for Excel)</label>
+            <input type="date" name="date_to" value="<?= e($date_to) ?>">
+        </div>
+        <p class="step-note" style="margin:0 0 8px">Excel export needs <strong>From</strong> and <strong>To</strong> dates (created date).</p>
         <div class="filter-flip-actions">
             <button type="submit" class="btn">Apply Filters</button>
             <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Reset</a>

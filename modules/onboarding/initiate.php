@@ -6,6 +6,7 @@
  * Also creates pending document rows and Admin approval.
  */
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('onboarding.edit');
 
 $prospectPk = (int) ($_GET['prospect_id'] ?? 0);
 $user = current_user();

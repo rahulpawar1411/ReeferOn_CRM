@@ -233,7 +233,11 @@ html, body {
   color: #1a3a6b;
   text-decoration: none;
 }
-.muted { color: #9db0cc; margin-top: 4px; }
+.muted { color: #66758c; margin-top: 4px; font-size: 12px; }
+table.data tr.is-unread td {
+  background: #f7fafc;
+  font-weight: 500;
+}
 
 .main {
   margin-left: 220px;
@@ -516,7 +520,12 @@ html, body {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-  align-items: end;
+  align-items: center;
+  width: 100%;
+}
+/* Push "Back to List" to the far right */
+.toolbar .btn-back-list {
+  margin-left: auto;
 }
 
 /* Right-side filter flip panel */
@@ -537,6 +546,19 @@ html, body {
 }
 .filter-flip-bar-right {
   margin-left: auto;
+}
+.filter-live-search {
+  min-width: 200px;
+  width: min(280px, 42vw);
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  font: inherit;
+  background: #fff;
+}
+.filter-live-search:focus {
+  outline: none;
+  border-color: #1a3a6b;
+  box-shadow: 0 0 0 2px rgba(26, 58, 107, 0.12);
 }
 .btn.has-active {
   border-color: #1a3a6b;
@@ -683,7 +705,17 @@ body.filter-flip-open {
   border-color: #a32626;
   color: #fff;
 }
-/* Delete text links in tables / actions */
+.btn-success {
+  background: #1e6b35;
+  border-color: #1e6b35;
+  color: #fff;
+}
+.btn-success:hover {
+  background: #258a44;
+  border-color: #258a44;
+  color: #fff;
+}
+/* Inactive / Active text links in tables */
 a.link-danger,
 .link-danger {
   color: #c62828 !important;
@@ -692,6 +724,16 @@ a.link-danger,
 a.link-danger:hover,
 .link-danger:hover {
   color: #8a1f1f !important;
+  text-decoration: underline;
+}
+a.link-success,
+.link-success {
+  color: #1e6b35 !important;
+  font-weight: 600;
+}
+a.link-success:hover,
+.link-success:hover {
+  color: #145028 !important;
   text-decoration: underline;
 }
 
@@ -727,6 +769,9 @@ a.link-danger:hover,
   font-size: 18px;
   color: #8a1f1f;
   flex: 1 1 auto;
+}
+.delete-modal h2.is-activate {
+  color: #1e6b35;
 }
 .delete-modal-x {
   flex: 0 0 auto;
@@ -916,6 +961,25 @@ table.data tr:nth-child(even) { background: #fafbfc; }
   font-size: 13px;
 }
 .pagination-links a:hover { background: #eef2f8; text-decoration: none; }
+.pagination-links a.pagination-nav {
+  min-width: auto;
+  padding: 6px 12px;
+}
+.pagination-nav.is-disabled {
+  display: inline-block;
+  min-width: auto;
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: #f5f5f5;
+  color: #999;
+  font-size: 13px;
+  cursor: default;
+}
+.pagination-ellipsis {
+  color: #889;
+  padding: 0 2px;
+  font-size: 13px;
+}
 .pagination-current {
   display: inline-block;
   min-width: 32px;

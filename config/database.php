@@ -9,7 +9,7 @@
  */
 
 define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'reeferon_crm');
+define('DB_NAME', 'crm');
 define('DB_USER', 'root');
 define('DB_PASS', ''); // WAMP default password is empty
 define('DB_CHARSET', 'utf8mb4');

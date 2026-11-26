@@ -2,11 +2,13 @@
 /**
  * View prospect
  *
- * Read-only lead summary with stage history, follow-ups, and onboarding links.
+ * Lead summary with stage history, follow-ups, and onboarding links.
+ * Toolbar: Edit, Change Stage, Follow-up, Inactive / Active (if allowed).
  */
 $pageTitle = 'View Prospect';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('prospects.view');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM prospects WHERE id = ?');
@@ -59,9 +61,11 @@ require_once __DIR__ . '/../../includes/header.php';
         <a class="btn" href="<?= e(base_url('modules/onboarding/view.php?id=' . $onb['id'])) ?>">Open Onboarding (<?= e($onb['onboarding_id']) ?>)</a>
     <?php endif; ?>
     <?php if (can('prospects.delete') && $p['status'] !== 'Inactive'): ?>
-        <a class="btn btn-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $p['id'])) ?>">Delete</a>
+        <a class="btn btn-danger" href="<?= e(base_url('modules/prospects/delete.php?id=' . $p['id'])) ?>">Inactive</a>
+    <?php elseif (can('prospects.delete') && $p['status'] === 'Inactive'): ?>
+        <a class="btn btn-success" href="<?= e(base_url('modules/prospects/activate.php?id=' . $p['id'])) ?>">Active</a>
     <?php endif; ?>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/index.php')) ?>">Back to List</a>
+    <a class="btn btn-secondary btn-back-list" href="<?= e(base_url('modules/prospects/index.php')) ?>">Back to List</a>
 </div>
 
 <?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb): ?>

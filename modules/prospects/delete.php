@@ -1,9 +1,9 @@
 <?php
 /**
- * Soft-delete prospect
+ * Make prospect Inactive
  *
- * Sets status = Inactive (keeps history). Permission: prospects.delete
- * Opens a centered popup — user must type "delete" to confirm.
+ * Soft status change only (keeps history). Permission: prospects.delete
+ * Popup: type "inactive" to confirm.
  */
 require_once __DIR__ . '/../../includes/functions.php';
 require_perm('prospects.delete');
@@ -27,12 +27,12 @@ $cancel = base_url('modules/prospects/view.php?id=' . $id);
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!delete_confirm_ok($_POST['confirm_text'] ?? '')) {
-        $errors[] = 'Please type delete in the box to confirm.';
+    if (!delete_confirm_ok($_POST['confirm_text'] ?? '', 'inactive')) {
+        $errors[] = 'Please type inactive in the box to confirm.';
     } else {
         try {
             soft_delete_prospect($id, trim($_POST['reason'] ?? ''));
-            flash('success', $p['prospect_id'] . ' marked Inactive (soft delete).', 'delete');
+            flash('success', $p['prospect_id'] . ' set to Inactive.', 'delete');
             redirect(base_url('modules/prospects/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Delete Prospect';
+$pageTitle = 'Inactive Prospect';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -53,10 +53,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <?php
 render_delete_confirm_modal([
-    'title' => 'Delete prospect?',
-    'message' => 'Record will become Inactive (not permanently erased). Type delete below to confirm.',
+    'title' => 'Make prospect Inactive?',
+    'message' => 'Record stays in history/logs. Status becomes Inactive. Type inactive below to confirm.',
     'item_label' => $p['prospect_id'] . ' — ' . $p['company_name'],
     'cancel_url' => $cancel,
+    'confirm_word' => 'inactive',
+    'confirm_btn' => 'Inactive',
     'hidden' => ['id' => (int) $p['id']],
 ]);
 ?>

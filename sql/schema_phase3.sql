@@ -1,5 +1,5 @@
 -- ReeferON CRM - Phase 3: Onboarding + Documents (+ approval rows ready for Phase 4)
-USE reeferon_crm;
+USE crm;
 
 CREATE TABLE IF NOT EXISTS onboarding (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

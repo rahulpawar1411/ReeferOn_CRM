@@ -1,5 +1,5 @@
 -- One-time: switch existing onboardings to Admin-only approval
-USE reeferon_crm;
+USE crm;
 
 -- Remove unused department approval rows
 DELETE FROM onboarding_approvals

@@ -2,11 +2,13 @@
 /**
  * View customer
  *
- * Read-only Customer Master record with links to onboarding / prospect.
+ * Customer Master record with links to onboarding / prospect.
+ * Toolbar: Edit, Inactive / Active (if allowed).
  */
 $pageTitle = 'View Customer';
 $currentPage = 'customers';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('customers.view');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM customers WHERE id = ?');
@@ -27,9 +29,11 @@ require_once __DIR__ . '/../../includes/header.php';
         <a class="btn" href="<?= e(base_url('modules/customers/edit.php?id=' . $c['id'])) ?>">Edit</a>
     <?php endif; ?>
     <?php if (can('customers.delete') && $c['status'] !== 'Inactive'): ?>
-        <a class="btn btn-danger" href="<?= e(base_url('modules/customers/delete.php?id=' . $c['id'])) ?>">Delete</a>
+        <a class="btn btn-danger" href="<?= e(base_url('modules/customers/delete.php?id=' . $c['id'])) ?>">Inactive</a>
+    <?php elseif (can('customers.delete') && $c['status'] === 'Inactive'): ?>
+        <a class="btn btn-success" href="<?= e(base_url('modules/customers/activate.php?id=' . $c['id'])) ?>">Active</a>
     <?php endif; ?>
-    <a class="btn btn-secondary" href="<?= e(base_url('modules/customers/index.php')) ?>">Back to List</a>
+    <a class="btn btn-secondary btn-back-list" href="<?= e(base_url('modules/customers/index.php')) ?>">Back to List</a>
     <?php if (!empty($c['onboarding_pk'])): ?>
         <a class="btn btn-secondary" href="<?= e(base_url('modules/onboarding/view.php?id=' . $c['onboarding_pk'])) ?>">Open Onboarding</a>
     <?php endif; ?>

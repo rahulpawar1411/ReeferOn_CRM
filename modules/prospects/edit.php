@@ -7,6 +7,7 @@
 $pageTitle = 'Edit Prospect';
 $currentPage = 'prospects';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('prospects.edit');
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = db()->prepare('SELECT * FROM prospects WHERE id = ?');

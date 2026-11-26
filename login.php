@@ -2,7 +2,7 @@
 /**
  * Login page
  *
- * User enters Login ID + Password.
+ * User enters Username + Password.
  * On success we save the session and send them to Dashboard (or ?next= URL).
  * Demo accounts are listed on the page for easy testing.
  */

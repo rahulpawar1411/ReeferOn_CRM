@@ -7,6 +7,7 @@
 $pageTitle = 'Follow-ups';
 $currentPage = 'followups';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('followups.view');
 
 $tab = $_GET['tab'] ?? 'today';
 $allowedTabs = ['today', 'upcoming', 'overdue', 'completed', 'all'];

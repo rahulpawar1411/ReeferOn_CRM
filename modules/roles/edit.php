@@ -90,9 +90,9 @@ require_once __DIR__ . '/../../includes/header.php';
 <div class="card">
     <h2><?= $role ? 'Edit checkboxes' : 'Create role' ?></h2>
     <p class="step-note">
-        Role choose karo → checkboxes tick/untick → Save.
-        <strong>Delete</strong> by default sirf Admin pe ON hai.
-        Dusre role ko dena ho to section <em>“Delete (Admin default…)”</em> mein checkbox tick karo.
+        Choose a role → tick or untick checkboxes → Save.
+        <strong>Inactive</strong> is ON by default only for Admin.
+        To allow another role, tick the checkbox under <em>“Inactive / Clear (Admin default…)”</em>.
     </p>
 
     <?php if ($errors): ?>

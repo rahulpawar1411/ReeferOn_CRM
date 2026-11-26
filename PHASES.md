@@ -30,7 +30,7 @@
 
 ### Deliverables
 - Project folder structure
-- MySQL database `reeferon_crm`
+- MySQL database `crm`
 - Core tables (empty structure)
 - Config file (DB connection)
 - Temporary user constant (e.g. `TEMP_USER_ID = 1`, name = "System User") until auth phase

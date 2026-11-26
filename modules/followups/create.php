@@ -7,6 +7,7 @@
 $pageTitle = 'Add Follow-up';
 $currentPage = 'followups';
 require_once __DIR__ . '/../../includes/functions.php';
+require_perm('followups.create');
 
 $user = current_user();
 $errors = [];

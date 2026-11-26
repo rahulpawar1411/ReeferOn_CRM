@@ -41,7 +41,13 @@ $reports = [
             <tr>
                 <td><?= e($label) ?></td>
                 <td><a href="<?= e(base_url('modules/reports/view.php?type=' . urlencode($key))) ?>">Open</a></td>
-                <td><a href="<?= e(base_url('modules/reports/export.php?type=' . urlencode($key))) ?>">Excel (CSV)</a></td>
+                <td>
+                    <?php if (can('reports.export')): ?>
+                        <a href="<?= e(base_url('modules/reports/export.php?type=' . urlencode($key))) ?>">Excel (CSV)</a>
+                    <?php else: ?>
+                        —
+                    <?php endif; ?>
+                </td>
             </tr>
         <?php endforeach; ?>
         </tbody>

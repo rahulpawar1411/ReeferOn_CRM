@@ -29,25 +29,25 @@ function permission_catalog(): array
         'prospects.create' => 'Prospects – Create',
         'prospects.edit' => 'Prospects – Edit',
         'prospects.stage' => 'Prospects – Change stage',
-        // Delete = soft Inactive only. Default ON for Admin; grant to others via checkbox.
-        'prospects.delete' => 'Delete Prospects (soft Inactive) – Admin default',
+        // Inactive = soft status only. Default ON for Admin; grant to others via checkbox.
+        'prospects.delete' => 'Make Prospects Inactive – Admin default',
         'followups.view' => 'Follow-ups – View',
         'followups.create' => 'Follow-ups – Create / Complete',
         'onboarding.view' => 'Onboarding – View',
         'onboarding.edit' => 'Onboarding – Edit / Documents / Submit',
-        'onboarding.delete_docs' => 'Delete Document files – Admin default',
+        'onboarding.delete_docs' => 'Clear Document files – Admin default',
         'approvals.view' => 'Approvals – View',
         'approvals.decide' => 'Approvals – Approve / Reject',
         'customers.view' => 'Customers – View',
         'customers.create' => 'Customers – Add existing',
         'customers.edit' => 'Customers – Edit',
-        'customers.delete' => 'Delete Customers (soft Inactive) – Admin default',
+        'customers.delete' => 'Make Customers Inactive – Admin default',
         'reports.view' => 'Reports – View',
         'reports.export' => 'Reports – Excel export',
         'notifications.view' => 'Notifications',
         'logs.view' => 'Logs – View / Export',
         'roles.manage' => 'Roles – Manage (checkboxes)',
-        'users.manage' => 'Users – Create / Edit / Soft delete – Admin default',
+        'users.manage' => 'Users – Create / Edit / Make Inactive – Admin default',
         'help.view' => 'Help',
     ];
 }
@@ -60,7 +60,7 @@ function permission_groups(): array
         'Sales' => ['prospects.view', 'prospects.create', 'prospects.edit', 'prospects.stage', 'followups.view', 'followups.create'],
         'Onboarding' => ['onboarding.view', 'onboarding.edit'],
         'Account / Approvals' => ['approvals.view', 'approvals.decide', 'customers.view', 'customers.create', 'customers.edit'],
-        'Delete (Admin default – tick to give others access)' => [
+        'Inactive / Clear (Admin default – tick to give others access)' => [
             'prospects.delete',
             'customers.delete',
             'onboarding.delete_docs',
@@ -234,7 +234,7 @@ function seed_default_roles(): void
         }
     }
 
-    // Newer permission keys (e.g. *.delete): grant to Admin / Super Admin if missing in saved JSON
+    // Newer Inactive / Clear keys (*.delete, delete_docs): grant Admin / Super Admin if missing in saved JSON
     $adminRows = $pdo->query(
         "SELECT id, name, permissions_json FROM roles WHERE name IN ('Admin', 'Super Admin')"
     )->fetchAll();
@@ -332,7 +332,7 @@ function auth_user(): ?array
             return null;
         }
         $u['permissions'] = decode_permissions($u['permissions_json'] ?? null);
-        // Super Admin / Account name always full access if role says so
+        // Super Admin always gets every permission
         if (($u['role_name'] ?? '') === 'Super Admin') {
             $u['permissions'] = array_fill_keys(array_keys(permission_catalog()), true);
         }
@@ -387,7 +387,6 @@ function can(string $permission): bool
     if (!empty($u['permissions'][$permission])) {
         return true;
     }
-    // Super Admin always
     if (($u['role_name'] ?? '') === 'Super Admin') {
         return true;
     }
