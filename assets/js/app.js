@@ -709,6 +709,45 @@
     });
   }
 
+  // Install app — button shows only when the browser offers install
+  var deferredInstall = null;
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstall = e;
+    var btn = document.getElementById('install-app-btn');
+    if (btn) btn.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', function () {
+    deferredInstall = null;
+    var btn = document.getElementById('install-app-btn');
+    if (btn) btn.hidden = true;
+  });
+
+  function bindInstallApp() {
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (standalone || document.getElementById('install-app-btn')) return;
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'install-app-btn';
+    btn.className = 'install-app-btn';
+    btn.textContent = 'Install app';
+    btn.hidden = !deferredInstall;
+    btn.addEventListener('click', function () {
+      if (!deferredInstall) return;
+      var promptEvent = deferredInstall;
+      deferredInstall = null;
+      btn.hidden = true;
+      promptEvent.prompt();
+      promptEvent.userChoice.then(function () {
+        deferredInstall = null;
+      });
+    });
+    document.body.appendChild(btn);
+  }
+
   // Mobile sidebar drawer
   function bindMobileNav() {
     var sidebar = document.getElementById('app-sidebar');
@@ -752,6 +791,7 @@
     bindDeleteConfirm();
     bindToasts();
     bindMobileNav();
+    bindInstallApp();
   });
 
   window.addEventListener('pageshow', function (e) {

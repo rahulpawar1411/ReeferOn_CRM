@@ -20,6 +20,18 @@ if (!$c) {
     redirect(base_url('modules/customers/index.php'));
 }
 
+$documents = [];
+if (!empty($c['onboarding_pk'])) {
+    $docsStmt = db()->prepare(
+        'SELECT id, doc_type, status, file_name, file_path, uploaded_by_name, updated_at
+         FROM onboarding_documents
+         WHERE onboarding_pk = ?
+         ORDER BY id'
+    );
+    $docsStmt->execute([(int) $c['onboarding_pk']]);
+    $documents = $docsStmt->fetchAll();
+}
+
 $pageTitle = 'Customer ' . $c['customer_code'];
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -69,5 +81,47 @@ require_once __DIR__ . '/../../includes/header.php';
         <dt>Created</dt><dd><?= e($c['created_at']) ?></dd>
     </dl>
 </div>
+
+<?php if (!empty($documents)): ?>
+<div class="card">
+    <h2>Verified Documents</h2>
+    <p class="step-note">Compliance and onboarding documents uploaded and verified during customer approval.</p>
+    <table class="data">
+        <thead>
+        <tr>
+            <th>Document Type</th>
+            <th>Status</th>
+            <th>File Name</th>
+            <th>Uploaded By / Date</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($documents as $d): ?>
+            <tr>
+                <td><strong><?= e($d['doc_type']) ?></strong></td>
+                <td><span class="badge"><?= e($d['status']) ?></span></td>
+                <td>
+                    <?php if (!empty($d['file_path'])): ?>
+                        <?= e($d['file_name']) ?>
+                    <?php else: ?>
+                        <span class="step-note">-</span>
+                    <?php endif; ?>
+                </td>
+                <td><?= e($d['uploaded_by_name'] ?? '-') ?><?= !empty($d['updated_at']) ? ' / ' . e($d['updated_at']) : '' ?></td>
+                <td>
+                    <?php if (!empty($d['file_path'])): ?>
+                        <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="<?= e(base_url('modules/onboarding/download.php?id=' . $d['id'])) ?>" target="_blank" rel="noopener">View</a>
+                        <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="<?= e(base_url('modules/onboarding/download.php?id=' . $d['id'] . '&mode=download')) ?>">Download</a>
+                    <?php else: ?>
+                        <span class="step-note"><?= e($d['status']) ?></span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

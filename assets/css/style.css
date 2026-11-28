@@ -1325,6 +1325,24 @@ code {
 .nav-backdrop {
   display: none;
 }
+.install-app-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 90;
+  border: 0;
+  background: #1a3a6b;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(26, 58, 107, 0.28);
+}
+.install-app-btn:hover { background: #142f57; }
+.install-app-btn[hidden] { display: none; }
 
 @media (max-width: 800px) {
   html { zoom: 1; }
