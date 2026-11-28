@@ -709,6 +709,37 @@
     });
   }
 
+  // Mobile sidebar drawer
+  function bindMobileNav() {
+    var sidebar = document.getElementById('app-sidebar');
+    if (!sidebar) return;
+    var backdrop = document.querySelector('.js-nav-backdrop');
+
+    function openNav() {
+      sidebar.classList.add('is-open');
+      document.body.classList.add('nav-open');
+      if (backdrop) backdrop.hidden = false;
+    }
+    function closeNav() {
+      sidebar.classList.remove('is-open');
+      document.body.classList.remove('nav-open');
+      if (backdrop) backdrop.hidden = true;
+    }
+
+    document.querySelectorAll('.js-nav-open').forEach(function (btn) {
+      btn.addEventListener('click', openNav);
+    });
+    document.querySelectorAll('.js-nav-close, .js-nav-backdrop').forEach(function (el) {
+      el.addEventListener('click', closeNav);
+    });
+    sidebar.querySelectorAll('nav a').forEach(function (a) {
+      a.addEventListener('click', closeNav);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeNav();
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     bindConfirm();
     bindNavLoader();
@@ -720,6 +751,7 @@
     bindGlobalSearchSuggest();
     bindDeleteConfirm();
     bindToasts();
+    bindMobileNav();
   });
 
   window.addEventListener('pageshow', function (e) {

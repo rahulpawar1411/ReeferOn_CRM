@@ -29,9 +29,15 @@ $user = current_user();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a3a6b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ReeferON CRM">
     <title><?= e($pageTitle) ?> | ReeferON CRM</title>
     <link rel="icon" type="image/png" href="<?= e(base_url('assets/logo.png')) ?>">
+    <link rel="apple-touch-icon" href="<?= e(base_url('assets/logo.png')) ?>">
+    <link rel="manifest" href="<?= e(base_url('manifest.webmanifest')) ?>">
     <link rel="stylesheet" href="<?= e(base_url('assets/css/style.css')) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/style.css') ?>">
     <meta name="crm-base" content="<?= e(base_url()) ?>">
 </head>
@@ -43,11 +49,14 @@ $user = current_user();
     </div>
 </div>
 <div class="app">
-    <aside class="sidebar">
-        <a class="brand" href="<?= e(base_url('index.php')) ?>">
-            <img src="<?= e(base_url('assets/logo.png')) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/logo.png') ?>" alt="ReeferON" class="brand-logo">
-            <span class="brand-text">ReeferON CRM</span>
-        </a>
+    <aside class="sidebar" id="app-sidebar">
+        <div class="sidebar-top">
+            <a class="brand" href="<?= e(base_url('index.php')) ?>">
+                <img src="<?= e(base_url('assets/logo.png')) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/logo.png') ?>" alt="ReeferON" class="brand-logo">
+                <span class="brand-text">ReeferON CRM</span>
+            </a>
+            <button type="button" class="nav-close js-nav-close" aria-label="Close menu">&times;</button>
+        </div>
         <nav>
             <?php if (can('dashboard.view')): ?>
                 <a class="<?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= e(base_url('index.php')) ?>">Dashboard</a>
@@ -125,8 +134,12 @@ $user = current_user();
     </aside>
     <main class="main">
         <header class="topbar">
+            <button type="button" class="nav-toggle js-nav-open" aria-label="Open menu" title="Menu">
+                <span></span><span></span><span></span>
+            </button>
             <h1><?= e($pageTitle) ?></h1>
         </header>
+        <div class="nav-backdrop js-nav-backdrop" hidden></div>
         <div class="content">
             <?php
             // Errors stay as page alerts. Success create/edit/Inactive/Active → top-right toast (JS).
