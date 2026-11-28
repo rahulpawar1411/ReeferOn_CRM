@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             clear_onboarding_document($id);
-            flash('success', $d['doc_type'] . ' file cleared.', 'delete');
+            flash('success', $d['doc_type'] . ' file cleared.', 'edit');
             redirect($back);
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

@@ -32,7 +32,9 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
-    <a class="btn" href="<?= e(base_url('modules/onboarding/edit.php?id=' . $o['id'])) ?>">Edit Details</a>
+    <?php if (can('onboarding.edit')): ?>
+        <a class="btn" href="<?= e(base_url('modules/onboarding/edit.php?id=' . $o['id'])) ?>">Edit Details</a>
+    <?php endif; ?>
     <a class="btn btn-secondary btn-back-list" href="<?= e(base_url('modules/onboarding/index.php')) ?>">Back to List</a>
     <a class="btn btn-secondary" href="<?= e(base_url('modules/prospects/view.php?id=' . $o['prospect_pk'])) ?>">Open Prospect</a>
 </div>

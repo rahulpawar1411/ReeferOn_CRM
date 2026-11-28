@@ -115,7 +115,7 @@ function phone_error(?string $raw, bool $required = false): ?string
 }
 
 /** Render +91 phone input (10 digits only) */
-function render_phone_input(string $name, ?string $value, bool $required = false, string $placeholder = '10-digit number'): void
+function render_phone_input(string $name, ?string $value, bool $required = false, string $placeholder = '10-digit number', string $help = 'Enter 10-digit Indian mobile number'): void
 {
     $digits = phone_digits($value);
     $req = $required ? ' required' : '';
@@ -125,6 +125,376 @@ function render_phone_input(string $name, ?string $value, bool $required = false
         . $req . ' maxlength="10" inputmode="numeric" pattern="[0-9]{10}"'
         . ' placeholder="' . e($placeholder) . '" autocomplete="tel-national">';
     echo '</div>';
+}
+
+/**
+ * Active users (helper kept for reports / future assignment screens).
+ * Prospect create uses the logged-in user as salesperson (not a picker).
+ */
+function active_salespeople(): array
+{
+    try {
+        return db()->query(
+            "SELECT id, employee_name
+             FROM users
+             WHERE status = 'Active'
+             ORDER BY employee_name ASC"
+        )->fetchAll() ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * Look up a user as salesperson by id.
+ * $anyStatus=true allows Inactive users (e.g. keep existing assignee on edit).
+ */
+function resolve_salesperson(?int $salespersonId, bool $anyStatus = false): ?array
+{
+    if (!$salespersonId) {
+        return null;
+    }
+    $sql = $anyStatus
+        ? "SELECT id, employee_name FROM users WHERE id = ? LIMIT 1"
+        : "SELECT id, employee_name FROM users WHERE id = ? AND status = 'Active' LIMIT 1";
+    $stmt = db()->prepare($sql);
+    $stmt->execute([$salespersonId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return null;
+    }
+    return [
+        'id' => (int) $row['id'],
+        'name' => (string) $row['employee_name'],
+    ];
+}
+
+/** Built-in Business Type options (extra values come from Masters → Dropdowns). */
+function business_types(): array
+{
+    return ['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'];
+}
+
+/** Built-in Service Required options. */
+function service_required_options(): array
+{
+    return ['Transportation', 'Warehousing', 'EV', 'Integrated Supply Chain', 'Other'];
+}
+
+/** Built-in Lead Source options. */
+function lead_source_options(): array
+{
+    return ['Reference', 'Website', 'Direct', 'LinkedIn', 'Other'];
+}
+
+/** Built-in temperature bands. */
+function temperature_options(): array
+{
+    return ['Ambient', 'Chiller', 'Frozen'];
+}
+
+/** Trim and shorten a posted dropdown option value. */
+function sanitize_option_value(?string $value, int $maxLen = 100): string
+{
+    $v = trim((string) $value);
+    $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+    if (mb_strlen($v) > $maxLen) {
+        $v = mb_substr($v, 0, $maxLen);
+    }
+    return $v;
+}
+
+/** Ensure the dropdown_options table exists (custom values from Masters → Dropdowns). */
+function ensure_dropdown_options_schema(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    try {
+        db()->exec(
+            "CREATE TABLE IF NOT EXISTS dropdown_options (
+              id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+              field_key VARCHAR(80) NOT NULL,
+              option_value VARCHAR(100) NOT NULL,
+              reason_note VARCHAR(255) DEFAULT NULL,
+              created_by INT UNSIGNED DEFAULT NULL,
+              created_by_name VARCHAR(150) DEFAULT NULL,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE KEY uq_dropdown_field_value (field_key, option_value),
+              KEY idx_dropdown_field (field_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        // Ignore during partial install
+    }
+}
+
+/** Field keys that can store custom options in dropdown_options. */
+function dropdown_option_field_keys(): array
+{
+    return [
+        'business_type',
+        'service_required',
+        'lead_source',
+        'temperature_requirement',
+        'vehicle_requirement',
+        'storage_requirement',
+        'interaction_type',
+    ];
+}
+
+/** Display labels for Masters → Dropdowns. */
+function dropdown_option_field_labels(): array
+{
+    return [
+        'business_type' => 'Business Type',
+        'service_required' => 'Service Required',
+        'lead_source' => 'Lead Source',
+        'temperature_requirement' => 'Temperature Requirement',
+        'vehicle_requirement' => 'Vehicle Requirement',
+        'storage_requirement' => 'Storage Requirement',
+        'interaction_type' => 'Interaction Type (Follow-ups)',
+    ];
+}
+
+/** Standard (built-in) options for a field key. */
+function standard_options_for(string $fieldKey): array
+{
+    return match ($fieldKey) {
+        'business_type' => business_types(),
+        'service_required' => service_required_options(),
+        'lead_source' => lead_source_options(),
+        'temperature_requirement' => temperature_options(),
+        'vehicle_requirement' => vehicle_requirements(),
+        'storage_requirement' => storage_requirements(),
+        'interaction_type' => interaction_types(),
+        default => [],
+    };
+}
+
+/** Custom options saved in DB for one field. */
+function custom_dropdown_options(string $fieldKey): array
+{
+    ensure_dropdown_options_schema();
+    if (!in_array($fieldKey, dropdown_option_field_keys(), true)) {
+        return [];
+    }
+    try {
+        $stmt = db()->prepare(
+            'SELECT option_value FROM dropdown_options WHERE field_key = ? ORDER BY option_value ASC'
+        );
+        $stmt->execute([$fieldKey]);
+        return array_values(array_filter(array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/** Custom option rows (id, value, note) for remove popup. */
+function custom_dropdown_option_rows(string $fieldKey): array
+{
+    ensure_dropdown_options_schema();
+    if (!in_array($fieldKey, dropdown_option_field_keys(), true)) {
+        return [];
+    }
+    try {
+        $stmt = db()->prepare(
+            'SELECT id, option_value, reason_note, created_by_name, created_at
+             FROM dropdown_options WHERE field_key = ? ORDER BY option_value ASC'
+        );
+        $stmt->execute([$fieldKey]);
+        return $stmt->fetchAll() ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/** Standard + custom options merged. */
+function merged_dropdown_options(string $fieldKey, array $standard = []): array
+{
+    if ($standard === []) {
+        $standard = standard_options_for($fieldKey);
+    }
+    $custom = custom_dropdown_options($fieldKey);
+    return array_values(array_unique(array_merge($standard, $custom)));
+}
+
+/** Save a custom option (persists after refresh). */
+function save_custom_dropdown_option(string $fieldKey, string $value, string $reason): array
+{
+    ensure_dropdown_options_schema();
+    if (!in_array($fieldKey, dropdown_option_field_keys(), true)) {
+        return ['ok' => false, 'error' => 'This field does not allow custom options.'];
+    }
+    $value = sanitize_option_value($value);
+    $reason = sanitize_option_value($reason, 250);
+    if ($value === '') {
+        return ['ok' => false, 'error' => 'Enter the new option.'];
+    }
+    if ($reason === '') {
+        return ['ok' => false, 'error' => 'Add a short note explaining why this option is needed.'];
+    }
+    if (in_array($value, standard_options_for($fieldKey), true)) {
+        return ['ok' => true, 'value' => $value, 'exists' => true];
+    }
+    $user = current_user();
+    try {
+        $pdo = db();
+        $chk = $pdo->prepare('SELECT id FROM dropdown_options WHERE field_key = ? AND option_value = ?');
+        $chk->execute([$fieldKey, $value]);
+        if ($chk->fetch()) {
+            return ['ok' => true, 'value' => $value, 'exists' => true];
+        }
+        $ins = $pdo->prepare(
+            'INSERT INTO dropdown_options (field_key, option_value, reason_note, created_by, created_by_name)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        $ins->execute([
+            $fieldKey,
+            $value,
+            $reason,
+            $user['id'] ?: null,
+            $user['name'] ?: null,
+        ]);
+        try {
+            write_audit('dropdown_options', $fieldKey, 'CREATE', null, $value . ' | ' . $reason);
+        } catch (Throwable $auditErr) {
+            // Option already saved — do not fail the whole add
+        }
+        return ['ok' => true, 'value' => $value, 'exists' => false];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Could not save option: ' . $e->getMessage()];
+    }
+}
+
+/** Remove one custom option by id (standard options cannot be removed). */
+function delete_custom_dropdown_option(int $id): array
+{
+    ensure_dropdown_options_schema();
+    try {
+        $stmt = db()->prepare('SELECT * FROM dropdown_options WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return ['ok' => false, 'error' => 'Custom option not found.'];
+        }
+        db()->prepare('DELETE FROM dropdown_options WHERE id = ?')->execute([$id]);
+        try {
+            write_audit(
+                'dropdown_options',
+                (string) $row['field_key'],
+                'DELETE',
+                (string) $row['option_value'],
+                (string) ($row['reason_note'] ?? '')
+            );
+        } catch (Throwable $auditErr) {
+            // Option already removed
+        }
+        return [
+            'ok' => true,
+            'field_key' => $row['field_key'],
+            'value' => $row['option_value'],
+        ];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Could not remove option: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Validate a dropdown value.
+ * Accepts: built-in list, previously saved value on the record, or a custom Masters option.
+ */
+function option_value_error(
+    string $value,
+    array $standardOptions,
+    string $label,
+    bool $required = true,
+    ?string $previous = null,
+    ?string $fieldKey = null
+): ?string {
+    if ($value === '') {
+        return $required ? ($label . ' is required.') : null;
+    }
+    if (in_array($value, $standardOptions, true)) {
+        return null;
+    }
+    if ($previous !== null && $value === $previous) {
+        return null;
+    }
+    if ($fieldKey !== null && in_array($value, custom_dropdown_options($fieldKey), true)) {
+        return null;
+    }
+    return 'Invalid ' . $label . '.';
+}
+
+/**
+ * Render a form select element.
+ * Merges built-in options with custom values from Masters → Dropdowns when field_key is supported.
+ * Function name is historical (the old + button on forms was removed).
+ *
+ * @param array{required?:bool,help?:string,empty?:string|false|null,allow_add?:bool,id?:string,field_key?:string} $attrs
+ */
+function render_select_with_add(string $name, array $options, ?string $selected = '', array $attrs = []): void
+{
+    $fieldKey = (string) ($attrs['field_key'] ?? $name);
+    $standard = $options;
+    if (in_array($fieldKey, dropdown_option_field_keys(), true)) {
+        $options = merged_dropdown_options($fieldKey, $standard);
+    }
+
+    $selected = trim((string) ($selected ?? ''));
+    $options = array_values(array_unique(array_filter(array_map('strval', $options), static fn($o) => $o !== '')));
+    if ($selected !== '' && !in_array($selected, $options, true)) {
+        $options[] = $selected;
+    }
+
+    $required = !empty($attrs['required']);
+    $empty = array_key_exists('empty', $attrs) ? $attrs['empty'] : 'Select';
+    $id = (string) ($attrs['id'] ?? $name);
+    $reqAttr = $required ? ' required' : '';
+
+    echo '<select id="' . e($id) . '" name="' . e($name) . '"' . $reqAttr . '>';
+    if ($empty !== false && $empty !== null) {
+        echo '<option value="">' . e((string) $empty) . '</option>';
+    }
+    foreach ($options as $opt) {
+        $sel = ($selected === $opt) ? ' selected' : '';
+        echo '<option value="' . e($opt) . '"' . $sel . '>' . e($opt) . '</option>';
+    }
+    echo '</select>';
+}
+
+/**
+ * Text / number / email / date / textarea with hover/focus help tip.
+ *
+ * @param array{type?:string,required?:bool,help?:string,placeholder?:string,step?:string,rows?:int,value?:string,readonly?:bool} $attrs
+ */
+function render_input_with_help(string $name, array $attrs = []): void
+{
+    $type = (string) ($attrs['type'] ?? 'text');
+    $value = (string) ($attrs['value'] ?? '');
+    $help = (string) ($attrs['help'] ?? '');
+    $placeholder = (string) ($attrs['placeholder'] ?? '');
+    $required = !empty($attrs['required']);
+    $readonly = !empty($attrs['readonly']);
+    $step = (string) ($attrs['step'] ?? '');
+    $rows = (int) ($attrs['rows'] ?? 3);
+
+    $phAttr = $placeholder !== '' ? ' placeholder="' . e($placeholder) . '"' : '';
+    $reqAttr = $required ? ' required' : '';
+    $roAttr = $readonly ? ' readonly' : '';
+    $stepAttr = $step !== '' ? ' step="' . e($step) . '"' : '';
+
+    if ($type === 'textarea') {
+        echo '<textarea name="' . e($name) . '"' . $reqAttr . $roAttr . $phAttr
+            . ' rows="' . max(2, $rows) . '">' . e($value) . '</textarea>';
+        return;
+    }
+
+    echo '<input type="' . e($type) . '" name="' . e($name) . '" value="' . e($value) . '"'
+        . $reqAttr . $roAttr . $phAttr . $stepAttr . '>';
 }
 
 // =============================================================================
@@ -197,9 +567,11 @@ function redirect(string $path): void
  *
  * $action (optional): 'create' | 'edit' | 'delete' | 'activate' | 'login'
  * Toast titles: delete → "Inactive", activate → "Active", login → "Welcome".
- * Success + action → top-right toast (Undo only for create/edit/delete/activate).
+ * Success + action → top-right toast.
+ * $undo (optional): ['entity'=>'prospect|customer|user', 'id'=>N, 'to'=>'Active|Inactive', 'redirect'=>url]
+ * When set, toast Undo really reverses soft status.
  */
-function flash(string $type, string $message, ?string $action = null): void
+function flash(string $type, string $message, ?string $action = null, ?array $undo = null): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
@@ -208,11 +580,29 @@ function flash(string $type, string $message, ?string $action = null): void
     if ($action !== null && !in_array($action, ['create', 'edit', 'delete', 'activate', 'login'], true)) {
         $action = null;
     }
-    $_SESSION['flash'] = [
+    $payload = [
         'type' => $type,
         'message' => $message,
         'action' => $action,
     ];
+    if (is_array($undo) && !empty($undo['entity']) && !empty($undo['id']) && !empty($undo['to'])) {
+        $token = bin2hex(random_bytes(16));
+        $_SESSION['toast_undo'] = [
+            'token' => $token,
+            'entity' => (string) $undo['entity'],
+            'id' => (int) $undo['id'],
+            'to' => (string) $undo['to'],
+            'redirect' => (string) ($undo['redirect'] ?? ''),
+            'expires' => time() + 120,
+        ];
+        $payload['undo'] = [
+            'token' => $token,
+            'api' => base_url('api/toast_undo.php'),
+        ];
+    } else {
+        unset($_SESSION['toast_undo']);
+    }
+    $_SESSION['flash'] = $payload;
 }
 
 /** Read and clear the flash message (show once, then remove). */
@@ -770,9 +1160,10 @@ function soft_delete_prospect(int $prospectPk, string $reason = ''): void
     if ($p['status'] === 'Inactive') {
         throw new RuntimeException('Prospect is already Inactive.');
     }
+    $oldStatus = (string) $p['status'];
     $pdo->prepare('UPDATE prospects SET status = ?, updated_by = ? WHERE id = ?')
         ->execute(['Inactive', current_user()['id'], $prospectPk]);
-    write_audit('prospects', $p['prospect_id'], 'INACTIVE', 'Active', $reason !== '' ? $reason : 'Inactive');
+    write_audit('prospects', $p['prospect_id'], 'INACTIVE', $oldStatus, $reason !== '' ? $reason : 'Inactive');
 }
 
 /**
@@ -814,8 +1205,9 @@ function soft_delete_user(int $userPk, string $reason = ''): void
     if ($u['status'] === 'Inactive') {
         throw new RuntimeException('User is already Inactive.');
     }
+    $oldStatus = (string) $u['status'];
     $pdo->prepare('UPDATE users SET status = ? WHERE id = ?')->execute(['Inactive', $userPk]);
-    write_audit('users', $u['user_id'], 'INACTIVE', 'Active', $reason !== '' ? $reason : ('Inactive ' . $u['employee_name']));
+    write_audit('users', $u['user_id'], 'INACTIVE', $oldStatus, $reason !== '' ? $reason : ('Inactive ' . $u['employee_name']));
 }
 
 /** Set prospect status back to Active. */
@@ -867,8 +1259,9 @@ function soft_activate_user(int $userPk, string $reason = ''): void
     if ($u['status'] === 'Active') {
         throw new RuntimeException('User is already Active.');
     }
+    $oldStatus = (string) $u['status'];
     $pdo->prepare('UPDATE users SET status = ? WHERE id = ?')->execute(['Active', $userPk]);
-    write_audit('users', $u['user_id'], 'ACTIVE', 'Inactive', $reason !== '' ? $reason : ('Active ' . $u['employee_name']));
+    write_audit('users', $u['user_id'], 'ACTIVE', $oldStatus, $reason !== '' ? $reason : ('Active ' . $u['employee_name']));
 }
 
 /**

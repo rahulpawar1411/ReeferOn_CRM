@@ -168,8 +168,11 @@ require_once __DIR__ . '/../../includes/header.php';
         'date_to' => $date_to,
         'export' => '1',
     ], static fn($v) => $v !== '' && $v !== null));
-    $leading = '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a> '
-        . '<a class="btn btn-secondary js-export-excel" href="' . e($excelUrl) . '"'
+    $leading = '';
+    if (can('prospects.create')) {
+        $leading .= '<a class="btn" href="' . e(base_url('modules/prospects/create.php')) . '">+ New Prospect</a> ';
+    }
+    $leading .= '<a class="btn btn-secondary js-export-excel" href="' . e($excelUrl) . '"'
         . ' data-from-param="date_from" data-to-param="date_to"'
         . ' title="Select From & To date in Filters first">Excel (CSV)</a>';
     filter_flip_start(

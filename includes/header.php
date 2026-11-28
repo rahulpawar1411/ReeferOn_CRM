@@ -93,8 +93,9 @@ $user = current_user();
                 ?></a>
             <?php endif; ?>
             <?php
-            $mastersOpen = in_array($currentPage, ['roles', 'users', 'reports', 'logs'], true);
-            $showMasters = can('roles.manage') || can('users.manage') || can('reports.view') || can('logs.view');
+            // Masters group: Roles, Users, Dropdown option lists, Reports, Logs
+            $mastersOpen = in_array($currentPage, ['roles', 'users', 'reports', 'logs', 'dropdowns'], true);
+            $showMasters = can('roles.manage') || can('users.manage') || can('reports.view') || can('logs.view') || can('masters.dropdowns');
             if ($showMasters):
             ?>
                 <div class="nav-group<?= $mastersOpen ? ' open' : '' ?>">
@@ -111,6 +112,10 @@ $user = current_user();
                             <?php endif; ?>
                             <?php if (can('users.manage')): ?>
                                 <a class="<?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= e(base_url('modules/users/index.php')) ?>">Users</a>
+                            <?php endif; ?>
+                            <?php if (can('masters.dropdowns')): ?>
+                                <!-- Custom form dropdown values (Business Type, Lead Source, …) -->
+                                <a class="<?= $currentPage === 'dropdowns' ? 'active' : '' ?>" href="<?= e(base_url('modules/masters/dropdowns.php')) ?>">Dropdowns</a>
                             <?php endif; ?>
                             <?php if (can('reports.view')): ?>
                                 <a class="<?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= e(base_url('modules/reports/index.php')) ?>">Reports</a>
@@ -154,4 +159,5 @@ $user = current_user();
                      'type' => $flash['type'],
                      'message' => $flash['message'],
                      'action' => $flash['action'],
+                     'undo' => $flash['undo'] ?? null,
                  ] : null, JSON_UNESCAPED_UNICODE)) ?>"></div>

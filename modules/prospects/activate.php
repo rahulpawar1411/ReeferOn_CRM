@@ -32,7 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_activate_prospect($id, trim($_POST['reason'] ?? ''));
-            flash('success', $p['prospect_id'] . ' set to Active.', 'activate');
+            flash('success', $p['prospect_id'] . ' set to Active.', 'activate', [
+                'entity' => 'prospect',
+                'id' => $id,
+                'to' => 'Inactive',
+                'redirect' => base_url('modules/prospects/view.php?id=' . $id),
+            ]);
             redirect(base_url('modules/prospects/view.php?id=' . $id));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

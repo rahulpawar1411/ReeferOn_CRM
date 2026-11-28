@@ -541,11 +541,12 @@
     });
   }
 
-  // --- Top-right toast (5s); Undo is acknowledgement only (no DB reverse) ---
+  // --- Top-right success toast (auto-closes in 5s) ---
+  // Undo button appears only when flash() included an undo token (Inactive ↔ Active).
   function toastTitles(action) {
     if (action === 'create') return 'Created';
     if (action === 'edit') return 'Updated';
-    if (action === 'delete') return 'Inactive'; // flash action key stays "delete"
+    if (action === 'delete') return 'Inactive'; // soft status; action key remains "delete"
     if (action === 'activate') return 'Active';
     if (action === 'login') return 'Welcome';
     return 'Saved';
@@ -557,7 +558,8 @@
 
     var action = (opts && opts.action) || '';
     var message = (opts && opts.message) || '';
-    var showUndo = action === 'create' || action === 'edit' || action === 'delete' || action === 'activate';
+    var undoInfo = opts && opts.undo && opts.undo.token && opts.undo.api ? opts.undo : null;
+    var showUndo = !!undoInfo;
 
     var el = document.createElement('div');
     el.className = 'toast' + (action ? ' toast-action-' + action : '');
@@ -578,24 +580,9 @@
     host.appendChild(el);
 
     var closed = false;
-    function closeToast(ack) {
+    function closeToast() {
       if (closed) return;
       closed = true;
-      if (ack) {
-        var msg = el.querySelector('.toast-msg');
-        var title = el.querySelector('.toast-title');
-        if (title) title.textContent = 'Acknowledged';
-        if (msg) msg.textContent = 'Noted. No further action.';
-        var undo = el.querySelector('[data-toast-undo]');
-        if (undo) undo.remove();
-        setTimeout(function () {
-          el.classList.add('is-leaving');
-          setTimeout(function () {
-            if (el.parentNode) el.parentNode.removeChild(el);
-          }, 180);
-        }, 700);
-        return;
-      }
       el.classList.add('is-leaving');
       setTimeout(function () {
         if (el.parentNode) el.parentNode.removeChild(el);
@@ -603,19 +590,51 @@
     }
 
     var timer = setTimeout(function () {
-      closeToast(false);
+      closeToast();
     }, 5000);
 
     el.querySelector('[data-toast-close]').addEventListener('click', function () {
       clearTimeout(timer);
-      closeToast(false);
+      closeToast();
     });
     var undoBtn = el.querySelector('[data-toast-undo]');
-    if (undoBtn) {
+    if (undoBtn && undoInfo) {
       undoBtn.addEventListener('click', function () {
         clearTimeout(timer);
-        // Acknowledgement only — does not reverse create/edit/Inactive in DB
-        closeToast(true);
+        undoBtn.disabled = true;
+        undoBtn.textContent = '…';
+        fetch(undoInfo.api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ token: undoInfo.token })
+        }).then(function (r) { return r.json().then(function (data) { return { okHttp: r.ok, data: data }; }); })
+          .then(function (res) {
+            if (!res.data || !res.data.ok) {
+              undoBtn.disabled = false;
+              undoBtn.textContent = 'Undo';
+              var msg = el.querySelector('.toast-msg');
+              if (msg) msg.textContent = (res.data && res.data.error) || 'Undo failed.';
+              return;
+            }
+            var title = el.querySelector('.toast-title');
+            var msg = el.querySelector('.toast-msg');
+            if (title) title.textContent = 'Undone';
+            if (msg) msg.textContent = res.data.message || 'Restored.';
+            undoBtn.remove();
+            setTimeout(function () {
+              if (res.data.redirect) {
+                window.location.href = res.data.redirect;
+              } else {
+                window.location.reload();
+              }
+            }, 450);
+          }).catch(function () {
+            undoBtn.disabled = false;
+            undoBtn.textContent = 'Undo';
+            var msg = el.querySelector('.toast-msg');
+            if (msg) msg.textContent = 'Undo failed. Try again.';
+          });
       });
     }
   }

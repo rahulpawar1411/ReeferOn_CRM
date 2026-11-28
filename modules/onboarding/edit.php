@@ -26,7 +26,7 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = trim($_POST['customer_name'] ?? '');
     $brand_name = trim($_POST['brand_name'] ?? '');
-    $business_type = $_POST['business_type'] ?? '';
+    $business_type = sanitize_option_value($_POST['business_type'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
     $mobile = phone_digits($_POST['mobile'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -35,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $operating_address = trim($_POST['operating_address'] ?? '');
     $gstin = strtoupper(trim($_POST['gstin'] ?? ''));
     $pan = strtoupper(trim($_POST['pan'] ?? ''));
-    $service_required = $_POST['service_required'] ?? '';
-    $temperature_requirement = $_POST['temperature_requirement'] ?? '';
-    $vehicle_requirement = $_POST['vehicle_requirement'] ?? '';
-    $storage_requirement = $_POST['storage_requirement'] ?? '';
+    $service_required = sanitize_option_value($_POST['service_required'] ?? '');
+    $temperature_requirement = sanitize_option_value($_POST['temperature_requirement'] ?? '', 50);
+    $vehicle_requirement = sanitize_option_value($_POST['vehicle_requirement'] ?? '', 50);
+    $storage_requirement = sanitize_option_value($_POST['storage_requirement'] ?? '', 50);
     $origin = trim($_POST['origin'] ?? '');
     $destination = trim($_POST['destination'] ?? '');
     $estimated_monthly_volume = trim($_POST['estimated_monthly_volume'] ?? '');
@@ -66,11 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
     $phoneErr = phone_error($mobile, true);
     if ($phoneErr) $errors[] = $phoneErr;
-    if (!in_array($business_type, ['QSR','FMCG','Ice Cream','Retail','Other'], true)) $errors[] = 'Invalid business type.';
-    if (!in_array($service_required, ['Transportation','Warehousing','EV','Integrated Supply Chain','Other'], true)) $errors[] = 'Invalid service.';
-    if (!in_array($temperature_requirement, ['Ambient','Chiller','Frozen'], true)) $errors[] = 'Invalid temperature.';
-    if ($vehicle_requirement !== '' && !in_array($vehicle_requirement, vehicle_requirements(), true)) $errors[] = 'Invalid vehicle.';
-    if ($storage_requirement !== '' && !in_array($storage_requirement, storage_requirements(), true)) $errors[] = 'Invalid storage.';
+    foreach ([
+        option_value_error($business_type, business_types(), 'Business Type', true, $o['business_type'] ?? null, 'business_type'),
+        option_value_error($service_required, service_required_options(), 'Service Required', true, $o['service_required'] ?? null, 'service_required'),
+        option_value_error($temperature_requirement, temperature_options(), 'Temperature', true, $o['temperature_requirement'] ?? null, 'temperature_requirement'),
+        option_value_error($vehicle_requirement, vehicle_requirements(), 'Vehicle Requirement', false, $o['vehicle_requirement'] ?? null, 'vehicle_requirement'),
+        option_value_error($storage_requirement, storage_requirements(), 'Storage Requirement', false, $o['storage_requirement'] ?? null, 'storage_requirement'),
+    ] as $optErr) {
+        if ($optErr) $errors[] = $optErr;
+    }
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email.';
     if ($credit_limit !== '' && !is_numeric($credit_limit)) $errors[] = 'Credit limit must be a number.';
 
@@ -194,11 +198,10 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Business Type <span class="required">*</span></label>
-                <select name="business_type" required>
-                    <?php foreach (['QSR','FMCG','Ice Cream','Retail','Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($o['business_type'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('business_type', business_types(), $o['business_type'], [
+                    'required' => true,
+                    'help' => 'Business type from the fixed list',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Contact Person <span class="required">*</span></label>
@@ -238,37 +241,29 @@ require_once __DIR__ . '/../../includes/header.php';
         <div class="form-grid">
             <div class="form-group">
                 <label>Service Required <span class="required">*</span></label>
-                <select name="service_required" required>
-                    <?php foreach (['Transportation','Warehousing','EV','Integrated Supply Chain','Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($o['service_required'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('service_required', service_required_options(), $o['service_required'], [
+                    'required' => true,
+                    'help' => 'Main service needed',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Temperature <span class="required">*</span></label>
-                <select name="temperature_requirement" required>
-                    <?php foreach (['Ambient','Chiller','Frozen'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($o['temperature_requirement'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('temperature_requirement', temperature_options(), $o['temperature_requirement'], [
+                    'required' => true,
+                    'help' => 'Cold-chain temperature',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Vehicle Requirement</label>
-                <select name="vehicle_requirement">
-                    <option value="">-- Select --</option>
-                    <?php foreach (vehicle_requirements() as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= (($o['vehicle_requirement'] ?? '') === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('vehicle_requirement', vehicle_requirements(), $o['vehicle_requirement'] ?? '', [
+                    'help' => 'Vehicle size',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Storage Requirement</label>
-                <select name="storage_requirement">
-                    <option value="">-- Select --</option>
-                    <?php foreach (storage_requirements() as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= (($o['storage_requirement'] ?? '') === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('storage_requirement', storage_requirements(), $o['storage_requirement'] ?? '', [
+                    'help' => 'Storage type',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Origin</label>

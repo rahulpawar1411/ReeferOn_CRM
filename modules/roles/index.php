@@ -29,6 +29,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <p class="step-note">
         Defaults for <strong>Admin</strong>, <strong>Salesperson</strong>, <strong>Management</strong>, <strong>Viewer</strong>.
         Open <strong>Edit Checkboxes</strong> and choose a role from the dropdown.
+        Give <strong>Inactive / Clear</strong> only to trusted roles. Give <strong>Add other (+)</strong> only to people who may invent new dropdown values with a reason note.
     </p>
 
     <?php if (!$rows): ?>

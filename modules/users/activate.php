@@ -28,7 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_activate_user($id, trim($_POST['reason'] ?? ''));
-            flash('success', $u['user_id'] . ' set to Active.', 'activate');
+            flash('success', $u['user_id'] . ' set to Active.', 'activate', [
+                'entity' => 'user',
+                'id' => $id,
+                'to' => 'Inactive',
+                'redirect' => base_url('modules/users/index.php'),
+            ]);
             redirect(base_url('modules/users/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

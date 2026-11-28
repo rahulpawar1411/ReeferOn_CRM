@@ -32,7 +32,7 @@ foreach ($prospects as $row) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $prospectPk = (int) ($_POST['prospect_pk'] ?? 0);
     $followup_date = trim($_POST['followup_date'] ?? '');
-    $interaction_type = $_POST['interaction_type'] ?? '';
+    $interaction_type = sanitize_option_value($_POST['interaction_type'] ?? '');
     $discussion_summary = trim($_POST['discussion_summary'] ?? '');
     $next_followup_date = trim($_POST['next_followup_date'] ?? '');
     $remarks = trim($_POST['remarks'] ?? '');
@@ -51,8 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($followup_date === '') {
         $errors[] = 'Follow-up Date is required.';
     }
-    if (!in_array($interaction_type, interaction_types(), true)) {
-        $errors[] = 'Interaction Type is required.';
+    $optErr = option_value_error($interaction_type, interaction_types(), 'Interaction Type', true, null, 'interaction_type');
+    if ($optErr) {
+        $errors[] = $optErr;
     }
     if ($discussion_summary === '') {
         $errors[] = 'Discussion Summary is required.';
@@ -150,12 +151,10 @@ require_once __DIR__ . '/../../includes/header.php';
                 </div>
                 <div class="form-group">
                     <label>Interaction Type <span class="required">*</span></label>
-                    <select name="interaction_type" required>
-                        <option value="">-- Select --</option>
-                        <?php foreach (interaction_types() as $t): ?>
-                            <option value="<?= e($t) ?>" <?= (($_POST['interaction_type'] ?? '') === $t) ? 'selected' : '' ?>><?= e($t) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?php render_select_with_add('interaction_type', interaction_types(), $_POST['interaction_type'] ?? '', [
+                        'required' => true,
+                        'help' => 'Call / meeting type',
+                    ]); ?>
                 </div>
 
                 <div class="form-group">

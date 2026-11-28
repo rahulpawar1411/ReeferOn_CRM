@@ -32,7 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_delete_prospect($id, trim($_POST['reason'] ?? ''));
-            flash('success', $p['prospect_id'] . ' set to Inactive.', 'delete');
+            flash('success', $p['prospect_id'] . ' set to Inactive.', 'delete', [
+                'entity' => 'prospect',
+                'id' => $id,
+                'to' => 'Active',
+                'redirect' => base_url('modules/prospects/view.php?id=' . $id),
+            ]);
             redirect(base_url('modules/prospects/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

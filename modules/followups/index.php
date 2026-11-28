@@ -70,7 +70,7 @@ $renderFollowupRows = static function (array $rows): string {
                     <td><span class="badge"><?= e($r['status']) ?></span></td>
                     <td><?= e($r['created_by_name']) ?></td>
                     <td>
-                        <?php if ($r['status'] === 'Open'): ?>
+                        <?php if ($r['status'] === 'Open' && can('followups.create')): ?>
                             <a href="<?= e(base_url('modules/followups/complete.php?id=' . $r['id'])) ?>">Complete</a>
                         <?php else: ?>
                             -
@@ -102,7 +102,9 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="toolbar">
-    <a class="btn" href="<?= e(base_url('modules/followups/create.php')) ?>">Add Follow-up</a>
+    <?php if (can('followups.create')): ?>
+        <a class="btn" href="<?= e(base_url('modules/followups/create.php')) ?>">Add Follow-up</a>
+    <?php endif; ?>
 </div>
 
 <div class="tabs">

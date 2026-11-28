@@ -32,7 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_activate_customer($id, trim($_POST['reason'] ?? ''));
-            flash('success', $c['customer_code'] . ' set to Active.', 'activate');
+            flash('success', $c['customer_code'] . ' set to Active.', 'activate', [
+                'entity' => 'customer',
+                'id' => $id,
+                'to' => 'Inactive',
+                'redirect' => base_url('modules/customers/view.php?id=' . $id),
+            ]);
             redirect(base_url('modules/customers/view.php?id=' . $id));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

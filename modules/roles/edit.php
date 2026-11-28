@@ -91,9 +91,15 @@ require_once __DIR__ . '/../../includes/header.php';
     <h2><?= $role ? 'Edit checkboxes' : 'Create role' ?></h2>
     <p class="step-note">
         Choose a role → tick or untick checkboxes → Save.
-        <strong>Inactive</strong> is ON by default only for Admin.
-        To allow another role, tick the checkbox under <em>“Inactive / Clear (Admin default…)”</em>.
     </p>
+    <div class="alert alert-success" style="margin-bottom:14px">
+        <strong>Who should get what?</strong>
+        <ul style="margin:8px 0 0;padding-left:18px">
+            <li><strong>Inactive / Clear</strong> (Prospects, Customers, Documents) — give only to Admin / trusted users. Default ON for Admin. Do not give to Viewer.</li>
+            <li><strong>Add other dropdown (+)</strong> — who may add a custom option with a reason note. Default ON for Admin + Salesperson. Off for Viewer / Management.</li>
+            <li><strong>Create / Edit</strong> — normal day-to-day work for Sales / Admin.</li>
+        </ul>
+    </div>
 
     <?php if ($errors): ?>
         <div class="alert alert-error">

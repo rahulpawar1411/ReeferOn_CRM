@@ -51,15 +51,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form['mobile'] = phone_digits($form['mobile']);
     $phoneErr = phone_error($form['mobile'], true);
     if ($phoneErr) $errors[] = $phoneErr;
-    if (!in_array($form['business_type'], ['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'], true)) {
-        $errors[] = 'Invalid business type.';
+    $form['business_type'] = sanitize_option_value($form['business_type']);
+    $form['temperature_requirement'] = sanitize_option_value($form['temperature_requirement'], 50);
+    foreach ([
+        option_value_error($form['business_type'], business_types(), 'Business Type', true, null, 'business_type'),
+        option_value_error($form['temperature_requirement'], temperature_options(), 'Temperature', false, null, 'temperature_requirement'),
+    ] as $optErr) {
+        if ($optErr) $errors[] = $optErr;
     }
     if (!in_array($form['status'], customer_statuses(), true)) $errors[] = 'Invalid status.';
     if ($form['email'] !== '' && !filter_var($form['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email.';
     if ($form['credit_limit'] !== '' && !is_numeric($form['credit_limit'])) $errors[] = 'Credit limit must be a number.';
-    if ($form['temperature_requirement'] !== '' && !in_array($form['temperature_requirement'], ['Ambient', 'Chiller', 'Frozen'], true)) {
-        $errors[] = 'Invalid temperature.';
-    }
 
     // If known code provided, must be unique and look like a code
     if ($form['customer_code'] !== '') {
@@ -197,11 +199,10 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Business Type <span class="required">*</span></label>
-                <select name="business_type" required>
-                    <?php foreach (['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= $form['business_type'] === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('business_type', business_types(), $form['business_type'], [
+                    'required' => true,
+                    'help' => 'Business type from the fixed list',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Contact Person <span class="required">*</span></label>
@@ -237,12 +238,9 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Temperature</label>
-                <select name="temperature_requirement">
-                    <option value="">-- Select --</option>
-                    <?php foreach (['Ambient', 'Chiller', 'Frozen'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= $form['temperature_requirement'] === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('temperature_requirement', temperature_options(), $form['temperature_requirement'], [
+                    'help' => 'Cold-chain temperature',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Commercial Details</label>

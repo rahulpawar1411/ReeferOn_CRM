@@ -101,8 +101,9 @@ $renderOnboardingRows = static function (array $rows): string {
                     <td><?= e($r['created_at']) ?></td>
                     <td>
                         <a href="<?= e(base_url('modules/onboarding/view.php?id=' . $r['id'])) ?>">View</a>
-                        |
-                        <a href="<?= e(base_url('modules/onboarding/edit.php?id=' . $r['id'])) ?>">Edit</a>
+                        <?php if (can('onboarding.edit')): ?>
+                            | <a href="<?= e(base_url('modules/onboarding/edit.php?id=' . $r['id'])) ?>">Edit</a>
+                        <?php endif; ?>
                     </td>
                 </tr>
     <?php endforeach;

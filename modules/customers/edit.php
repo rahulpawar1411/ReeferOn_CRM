@@ -28,7 +28,7 @@ $dupMatches = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = trim($_POST['customer_name'] ?? '');
     $brand_name = trim($_POST['brand_name'] ?? '');
-    $business_type = $_POST['business_type'] ?? '';
+    $business_type = sanitize_option_value($_POST['business_type'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
     $mobile = phone_digits($_POST['mobile'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $billing_address = trim($_POST['billing_address'] ?? '');
     $operating_location = trim($_POST['operating_location'] ?? '');
     $services = trim($_POST['services'] ?? '');
-    $temperature_requirement = $_POST['temperature_requirement'] ?? '';
+    $temperature_requirement = sanitize_option_value($_POST['temperature_requirement'] ?? '', 50);
     $commercial_details = trim($_POST['commercial_details'] ?? '');
     $payment_terms = trim($_POST['payment_terms'] ?? '');
     $credit_limit = trim($_POST['credit_limit'] ?? '');
@@ -50,14 +50,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
     $phoneErr = phone_error($mobile, true);
     if ($phoneErr) $errors[] = $phoneErr;
-    if (!in_array($business_type, ['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'], true)) {
-        $errors[] = 'Invalid business type.';
+    foreach ([
+        option_value_error($business_type, business_types(), 'Business Type', true, $c['business_type'] ?? null, 'business_type'),
+        option_value_error($temperature_requirement, temperature_options(), 'Temperature', false, $c['temperature_requirement'] ?? null, 'temperature_requirement'),
+    ] as $optErr) {
+        if ($optErr) $errors[] = $optErr;
     }
     if (!in_array($status, customer_statuses(), true)) $errors[] = 'Invalid status.';
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email.';
     if ($credit_limit !== '' && !is_numeric($credit_limit)) $errors[] = 'Credit limit must be a number.';
-    if ($temperature_requirement !== '' && !in_array($temperature_requirement, ['Ambient', 'Chiller', 'Frozen'], true)) {
-        $errors[] = 'Invalid temperature.';
+    // Status Active/Inactive/On Hold: Inactive needs customers.delete
+    if ($status === 'Inactive' && ($c['status'] ?? '') !== 'Inactive' && !can('customers.delete')) {
+        $errors[] = 'You do not have permission to make customers Inactive.';
     }
 
     if (!$errors) {
@@ -163,19 +167,29 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Business Type <span class="required">*</span></label>
-                <select name="business_type" required>
-                    <?php foreach (['QSR', 'FMCG', 'Ice Cream', 'Retail', 'Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($c['business_type'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('business_type', business_types(), $c['business_type'], [
+                    'required' => true,
+                    'help' => 'Business type from the fixed list',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Status <span class="required">*</span></label>
-                <select name="status" required>
-                    <?php foreach (customer_statuses() as $s): ?>
-                        <option value="<?= e($s) ?>" <?= (($c['status'] ?? '') === $s) ? 'selected' : '' ?>><?= e($s) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php
+                $statusOpts = can('customers.delete')
+                    ? customer_statuses()
+                    : array_values(array_filter(customer_statuses(), static fn($s) => $s !== 'Inactive' || ($c['status'] ?? '') === 'Inactive'));
+                if (($c['status'] ?? '') === 'Inactive' && !can('customers.delete')) {
+                    $statusOpts = ['Inactive'];
+                }
+                render_select_with_add('status', $statusOpts, $c['status'] ?? 'Active', [
+                    'required' => true,
+                    'allow_add' => false,
+                    'empty' => false,
+                    'help' => can('customers.delete')
+                        ? 'Active / Inactive / On Hold'
+                        : 'Inactive requires customers.delete permission',
+                ]);
+                ?>
             </div>
             <div class="form-group">
                 <label>Contact Person <span class="required">*</span></label>
@@ -211,12 +225,9 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Temperature</label>
-                <select name="temperature_requirement">
-                    <option value="">-- Select --</option>
-                    <?php foreach (['Ambient', 'Chiller', 'Frozen'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= (($c['temperature_requirement'] ?? '') === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('temperature_requirement', temperature_options(), $c['temperature_requirement'] ?? '', [
+                    'help' => 'Cold-chain temperature',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Commercial Details</label>

@@ -55,9 +55,9 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php if (can('followups.create')): ?>
         <a class="btn" href="<?= e(base_url('modules/followups/create.php?prospect_id=' . $p['id'])) ?>">Add Follow-up</a>
     <?php endif; ?>
-    <?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb): ?>
+    <?php if ($p['pipeline_stage'] === 'Commercial Approved' && !$onb && can('onboarding.edit')): ?>
         <a class="btn" href="<?= e(base_url('modules/onboarding/initiate.php?prospect_id=' . $p['id'])) ?>">Initiate Customer Onboarding</a>
-    <?php elseif ($onb): ?>
+    <?php elseif ($onb && can('onboarding.view')): ?>
         <a class="btn" href="<?= e(base_url('modules/onboarding/view.php?id=' . $onb['id'])) ?>">Open Onboarding (<?= e($onb['onboarding_id']) ?>)</a>
     <?php endif; ?>
     <?php if (can('prospects.delete') && $p['status'] !== 'Inactive'): ?>

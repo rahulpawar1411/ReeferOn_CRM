@@ -29,14 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $designation = trim($_POST['designation'] ?? '');
     $mobile = phone_digits($_POST['mobile'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $business_type = $_POST['business_type'] ?? '';
+    $business_type = sanitize_option_value($_POST['business_type'] ?? '');
     $industry = trim($_POST['industry'] ?? '');
     $city = trim($_POST['city'] ?? '');
-    $service_required = $_POST['service_required'] ?? '';
-    $temperature_requirement = $_POST['temperature_requirement'] ?? '';
+    $service_required = sanitize_option_value($_POST['service_required'] ?? '');
+    $temperature_requirement = sanitize_option_value($_POST['temperature_requirement'] ?? '', 50);
     $requirement_details = trim($_POST['requirement_details'] ?? '');
     $estimated_monthly_business = trim($_POST['estimated_monthly_business'] ?? '');
-    $lead_source = $_POST['lead_source'] ?? '';
+    $lead_source = sanitize_option_value($_POST['lead_source'] ?? '');
     $pipeline_stage = $_POST['pipeline_stage'] ?? '';
     $next_followup_date = trim($_POST['next_followup_date'] ?? '');
     $remarks = trim($_POST['remarks'] ?? '');
@@ -46,10 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($contact_person === '') $errors[] = 'Contact Person is required.';
     $phoneErr = phone_error($mobile, true);
     if ($phoneErr) $errors[] = $phoneErr;
-    if ($business_type === '') $errors[] = 'Business Type is required.';
-    if ($service_required === '') $errors[] = 'Service Required is required.';
-    if ($temperature_requirement === '') $errors[] = 'Temperature Requirement is required.';
-    if ($lead_source === '') $errors[] = 'Lead Source is required.';
+    foreach ([
+        option_value_error($business_type, business_types(), 'Business Type', true, $p['business_type'] ?? null, 'business_type'),
+        option_value_error($service_required, service_required_options(), 'Service Required', true, $p['service_required'] ?? null, 'service_required'),
+        option_value_error($temperature_requirement, temperature_options(), 'Temperature Requirement', true, $p['temperature_requirement'] ?? null, 'temperature_requirement'),
+        option_value_error($lead_source, lead_source_options(), 'Lead Source', true, $p['lead_source'] ?? null, 'lead_source'),
+    ] as $optErr) {
+        if ($optErr) $errors[] = $optErr;
+    }
     if (!in_array($pipeline_stage, pipeline_stages(), true)) $errors[] = 'Invalid pipeline stage.';
     if (!in_array($status, ['Active', 'Inactive'], true)) $errors[] = 'Invalid status.';
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email ID is invalid.';
@@ -148,6 +152,11 @@ require_once __DIR__ . '/../../includes/header.php';
     <form method="post" action="">
         <div class="form-grid">
             <div class="form-group">
+                <!-- Set at create time from the creator's profile; not editable here -->
+                <label>Salesperson Name</label>
+                <input type="text" value="<?= e($p['salesperson_name'] ?? '') ?>" readonly>
+            </div>
+            <div class="form-group">
                 <label>Company Name <span class="required">*</span></label>
                 <input type="text" name="company_name" required value="<?= e($p['company_name']) ?>">
             </div>
@@ -171,71 +180,88 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group">
                 <label>Business Type <span class="required">*</span></label>
-                <select name="business_type" required>
-                    <?php foreach (['QSR','FMCG','Ice Cream','Retail','Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($p['business_type'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('business_type', business_types(), $p['business_type'], [
+                    'required' => true,
+                    'help' => 'Business type from the fixed list',
+                ]); ?>
             </div>
 
             <div class="form-group">
                 <label>Industry</label>
-                <input type="text" name="industry" value="<?= e($p['industry'] ?? '') ?>">
+                <?php render_input_with_help('industry', [
+                    'value' => $p['industry'] ?? '',
+                    'help' => 'Industry segment, e.g. Dairy, Pharma',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>City</label>
-                <input type="text" name="city" value="<?= e($p['city'] ?? '') ?>">
+                <?php render_input_with_help('city', [
+                    'value' => $p['city'] ?? '',
+                    'help' => 'City where the customer operates',
+                ]); ?>
             </div>
 
             <div class="form-group">
                 <label>Service Required <span class="required">*</span></label>
-                <select name="service_required" required>
-                    <?php foreach (['Transportation','Warehousing','EV','Integrated Supply Chain','Other'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($p['service_required'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('service_required', service_required_options(), $p['service_required'], [
+                    'required' => true,
+                    'help' => 'Main service needed',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Temperature Requirement <span class="required">*</span></label>
-                <select name="temperature_requirement" required>
-                    <?php foreach (['Ambient','Chiller','Frozen'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($p['temperature_requirement'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('temperature_requirement', temperature_options(), $p['temperature_requirement'], [
+                    'required' => true,
+                    'help' => 'Cold-chain temperature band',
+                ]); ?>
             </div>
 
             <div class="form-group">
                 <label>Estimated Monthly Business (₹)</label>
-                <input type="number" step="0.01" name="estimated_monthly_business" value="<?= e($p['estimated_monthly_business'] ?? '') ?>">
+                <?php render_input_with_help('estimated_monthly_business', [
+                    'type' => 'number',
+                    'step' => '0.01',
+                    'value' => (string) ($p['estimated_monthly_business'] ?? ''),
+                    'help' => 'Expected monthly revenue in rupees',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Lead Source <span class="required">*</span></label>
-                <select name="lead_source" required>
-                    <?php foreach (['Reference','Website','Direct','Other','LinkedIn'] as $opt): ?>
-                        <option value="<?= e($opt) ?>" <?= ($p['lead_source'] === $opt) ? 'selected' : '' ?>><?= e($opt) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('lead_source', lead_source_options(), $p['lead_source'], [
+                    'required' => true,
+                    'help' => 'How this lead came in',
+                ]); ?>
             </div>
 
             <div class="form-group">
                 <label>Pipeline Stage</label>
-                <select name="pipeline_stage">
-                    <?php foreach (pipeline_stages() as $s): ?>
-                        <option value="<?= e($s) ?>" <?= ($p['pipeline_stage'] === $s) ? 'selected' : '' ?>><?= e($s) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php render_select_with_add('pipeline_stage', pipeline_stages(), $p['pipeline_stage'], [
+                    'allow_add' => false,
+                    'empty' => false,
+                    'help' => 'Sales pipeline stage (system list only)',
+                ]); ?>
             </div>
             <div class="form-group">
                 <label>Next Follow-up Date</label>
-                <input type="date" name="next_followup_date" value="<?= e($p['next_followup_date'] ?? '') ?>">
+                <?php render_input_with_help('next_followup_date', [
+                    'type' => 'date',
+                    'value' => $p['next_followup_date'] ?? '',
+                    'help' => 'When sales should call or meet next',
+                ]); ?>
             </div>
 
             <div class="form-group">
                 <label>Record Status</label>
-                <select name="status">
-                    <option value="Active" <?= ($p['status'] === 'Active') ? 'selected' : '' ?>>Active</option>
-                    <option value="Inactive" <?= ($p['status'] === 'Inactive') ? 'selected' : '' ?>>Inactive</option>
-                </select>
+                <?php if (can('prospects.delete')): ?>
+                    <?php render_select_with_add('status', ['Active', 'Inactive'], $p['status'], [
+                        'allow_add' => false,
+                        'empty' => '',
+                        'help' => 'Inactive keeps history (needs Inactive permission)',
+                    ]); ?>
+                <?php else: ?>
+                    <input type="hidden" name="status" value="<?= e($p['status']) ?>">
+                    <input type="text" value="<?= e($p['status']) ?>" readonly title="Only users with Inactive permission can change this">
+                <?php endif; ?>
             </div>
 
             <div class="form-group full">

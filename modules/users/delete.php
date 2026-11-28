@@ -28,7 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_delete_user($id, trim($_POST['reason'] ?? ''));
-            flash('success', $u['user_id'] . ' set to Inactive.', 'delete');
+            flash('success', $u['user_id'] . ' set to Inactive.', 'delete', [
+                'entity' => 'user',
+                'id' => $id,
+                'to' => 'Active',
+                'redirect' => base_url('modules/users/index.php'),
+            ]);
             redirect(base_url('modules/users/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

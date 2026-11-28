@@ -32,7 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             soft_delete_customer($id, trim($_POST['reason'] ?? ''));
-            flash('success', $c['customer_code'] . ' set to Inactive.', 'delete');
+            flash('success', $c['customer_code'] . ' set to Inactive.', 'delete', [
+                'entity' => 'customer',
+                'id' => $id,
+                'to' => 'Active',
+                'redirect' => base_url('modules/customers/view.php?id=' . $id),
+            ]);
             redirect(base_url('modules/customers/index.php'));
         } catch (Throwable $e) {
             $errors[] = $e->getMessage();

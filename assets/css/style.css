@@ -726,6 +726,91 @@ body.filter-flip-open {
   border-color: #258a44;
   color: #fff;
 }
+.masters-dd {
+  max-width: 420px;
+}
+.masters-dd .step-note {
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.masters-dd-pick {
+  margin-bottom: 10px;
+}
+.masters-dd-add {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.masters-dd-pick label,
+.masters-dd-add label {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.masters-dd-pick select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  font: inherit;
+  background: #fff;
+}
+.masters-dd-list-wrap {
+  margin-bottom: 0;
+}
+.masters-dd-list-head {
+  font-size: 12px;
+  font-weight: bold;
+  color: #1a3a6b;
+  margin-bottom: 4px;
+}
+.masters-dd-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #d5dde8;
+  max-height: 260px;
+  overflow: auto;
+}
+.masters-dd-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #e8eef5;
+  font-size: 13px;
+  background: #fff;
+}
+.masters-dd-list li:last-child { border-bottom: 0; }
+.masters-dd-list li.is-fixed {
+  background: #f3f6fa;
+  color: #475569;
+}
+.masters-dd-list li.is-fixed em {
+  font-style: normal;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.masters-dd-list li.is-empty {
+  color: #94a3b8;
+  justify-content: center;
+}
+.masters-dd-list form { margin: 0; }
+.masters-dd-add-row {
+  display: flex;
+  gap: 8px;
+}
+.masters-dd-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #ccc;
+  font: inherit;
+}
+.masters-dd-add-row .btn {
+  flex: 0 0 auto;
+}
 /* Inactive / Active text links in tables */
 a.link-danger,
 .link-danger {
@@ -1345,8 +1430,54 @@ code {
 .install-app-btn[hidden] { display: none; }
 
 @media (max-width: 800px) {
+  /* One small base size — keep UI fonts consistent on phone */
   html { zoom: 1; }
-  body { font-size: 15px; }
+  body { font-size: 12px; }
+  .brand,
+  .brand-text,
+  .sidebar nav a,
+  .nav-group-toggle,
+  .user-welcome,
+  .user-name,
+  .btn-logout,
+  .topbar h1,
+  .card h2,
+  .card h3,
+  .step-note,
+  .muted,
+  .btn,
+  .btn-sm,
+  .toolbar label,
+  .form-group label,
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .tabs a,
+  .badge,
+  .stat-n,
+  .stat-l,
+  .toast-title,
+  .toast-msg,
+  .toast-undo,
+  .pagination-nav,
+  .install-app-btn,
+  .login-brand h1,
+  .login-brand .muted,
+  .masters-dd-list,
+  .masters-dd-list-head,
+  .masters-dd-pick label,
+  .masters-dd-add label,
+  table.data,
+  table.data th,
+  table.data td {
+    font-size: 12px !important;
+  }
+  .stat-n { font-weight: bold; }
+  .topbar h1,
+  .card h2,
+  .login-brand h1 {
+    font-size: 14px !important;
+  }
   .nav-toggle { display: inline-flex; }
   .nav-close { display: inline-block; }
   .sidebar {
@@ -1384,7 +1515,52 @@ code {
   .form-grid { grid-template-columns: 1fr; }
   .dl-grid { grid-template-columns: 1fr; }
   .content { padding: 12px; }
-  table.data { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table.data th,
+  table.data td {
+    padding: 5px 6px;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+  .badge { padding: 1px 5px; }
+  /* Compact dropdowns / selects on phone */
+  .form-group select,
+  .masters-dd-pick select,
+  select {
+    max-width: 100%;
+    padding: 6px 8px !important;
+    min-height: 0;
+    line-height: 1.3;
+  }
+  .masters-dd {
+    max-width: 100%;
+    padding: 12px;
+  }
+  .masters-dd .step-note {
+    font-size: 11px !important;
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+  .masters-dd-list {
+    max-height: 140px;
+  }
+  .masters-dd-list li {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+  .masters-dd-list li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .masters-dd-add-row input {
+    padding: 6px 8px;
+  }
   .login-page { padding: 16px; }
   .toast-host { left: 12px; right: 12px; }
 }

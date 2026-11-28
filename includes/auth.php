@@ -30,24 +30,25 @@ function permission_catalog(): array
         'prospects.edit' => 'Prospects – Edit',
         'prospects.stage' => 'Prospects – Change stage',
         // Inactive = soft status only. Default ON for Admin; grant to others via checkbox.
-        'prospects.delete' => 'Make Prospects Inactive – Admin default',
+        'prospects.delete' => 'Inactive Prospects – give only to trusted roles (Admin default)',
         'followups.view' => 'Follow-ups – View',
         'followups.create' => 'Follow-ups – Create / Complete',
         'onboarding.view' => 'Onboarding – View',
         'onboarding.edit' => 'Onboarding – Edit / Documents / Submit',
-        'onboarding.delete_docs' => 'Clear Document files – Admin default',
+        'onboarding.delete_docs' => 'Clear Document files – give only to trusted roles (Admin default)',
         'approvals.view' => 'Approvals – View',
         'approvals.decide' => 'Approvals – Approve / Reject',
         'customers.view' => 'Customers – View',
         'customers.create' => 'Customers – Add existing',
         'customers.edit' => 'Customers – Edit',
-        'customers.delete' => 'Make Customers Inactive – Admin default',
+        'customers.delete' => 'Inactive Customers – give only to trusted roles (Admin default)',
         'reports.view' => 'Reports – View',
         'reports.export' => 'Reports – Excel export',
         'notifications.view' => 'Notifications',
         'logs.view' => 'Logs – View / Export',
         'roles.manage' => 'Roles – Manage (checkboxes)',
         'users.manage' => 'Users – Create / Edit / Make Inactive – Admin default',
+        'masters.dropdowns' => 'Masters – Dropdown options (add / remove)',
         'help.view' => 'Help',
     ];
 }
@@ -66,7 +67,7 @@ function permission_groups(): array
             'onboarding.delete_docs',
         ],
         'Reports & Alerts' => ['reports.view', 'reports.export', 'notifications.view', 'logs.view'],
-        'Admin' => ['roles.manage', 'users.manage', 'help.view'],
+        'Admin' => ['roles.manage', 'users.manage', 'masters.dropdowns', 'help.view'],
     ];
 }
 
@@ -245,8 +246,9 @@ function seed_default_roles(): void
         }
         $perms = decode_permissions($ar['permissions_json'] ?? null);
         $changed = false;
-        foreach (['prospects.delete', 'customers.delete', 'onboarding.delete_docs'] as $key) {
-            if (!array_key_exists($key, $raw)) {
+        foreach (['prospects.delete', 'customers.delete', 'onboarding.delete_docs', 'masters.dropdowns'] as $key) {
+            // Always keep these ON for Admin / Super Admin (even if older save had false)
+            if (empty($perms[$key])) {
                 $perms[$key] = true;
                 $changed = true;
             }
